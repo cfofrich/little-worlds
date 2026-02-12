@@ -6,6 +6,17 @@ export type StickerDefinition = {
   color: string;
   glowColor?: string;
   imageSource?: ImageSourcePropType;
+  imageScale?: number;
+  imageOffsetY?: number;
+};
+
+export type StickerTrayTheme = {
+  trayBackground: string;
+  traySurface: string;
+  trayBorder: string;
+  trayLabelBackground: string;
+  trayLabelText: string;
+  cleanupSlotBackground: string;
 };
 
 export type PlacedSticker = {

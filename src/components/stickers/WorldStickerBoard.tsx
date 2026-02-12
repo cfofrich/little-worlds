@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import DraggablePlacedSticker from './DraggablePlacedSticker';
 import StickerTray, { CLEANUP_TARGET_GAP, TRAY_ITEM_SIZE } from './StickerTray';
-import { PlacedSticker, StickerDefinition } from './types';
+import { PlacedSticker, StickerDefinition, StickerTrayTheme } from './types';
 
 type WorldStickerBoardProps = {
   backgroundSource: ImageSourcePropType;
@@ -18,13 +18,23 @@ type WorldStickerBoardProps = {
   trayHeight?: number;
   placedStickerSize?: number;
   topInset?: number;
+  worldLabel?: string;
+  trayTheme?: StickerTrayTheme;
   children?: ReactNode;
 };
 
 type Mode = 'creative' | 'cleanup';
 
-const DEFAULT_TRAY_HEIGHT = 112;
+const DEFAULT_TRAY_HEIGHT = 146;
 const DEFAULT_STICKER_SIZE = 88;
+const DEFAULT_TRAY_THEME: StickerTrayTheme = {
+  trayBackground: 'rgba(220, 248, 236, 0.96)',
+  traySurface: 'rgba(243, 253, 247, 0.98)',
+  trayBorder: '#88C9A1',
+  trayLabelBackground: '#D8F3E3',
+  trayLabelText: '#246A4D',
+  cleanupSlotBackground: 'rgba(255, 255, 255, 0.85)',
+};
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -36,6 +46,8 @@ export default function WorldStickerBoard({
   trayHeight = DEFAULT_TRAY_HEIGHT,
   placedStickerSize = DEFAULT_STICKER_SIZE,
   topInset = 12,
+  worldLabel,
+  trayTheme = DEFAULT_TRAY_THEME,
   children,
 }: WorldStickerBoardProps) {
   const [layout, setLayout] = useState({ width: 0, height: 0 });
@@ -61,16 +73,26 @@ export default function WorldStickerBoard({
   }, [stickers]);
 
   const playAreaHeight = Math.max(0, layout.height - trayHeight);
+  const remainingStickerIds = useMemo(
+    () => new Set(placedStickers.map((item) => item.stickerId)),
+    [placedStickers]
+  );
 
   const cleanupTrayTargets = useMemo(() => {
     if (!layout.width || !layout.height || !stickers.length) {
       return {} as Record<string, { x: number; y: number; size: number }>;
     }
 
-    const targetSize = TRAY_ITEM_SIZE;
+    const availableWidth = layout.width - 28;
+    const gap = CLEANUP_TARGET_GAP;
+    const maxFitSize = Math.floor(
+      (availableWidth - gap * Math.max(0, stickers.length - 1)) /
+        Math.max(1, stickers.length)
+    );
+    const targetSize = clamp(maxFitSize, 46, TRAY_ITEM_SIZE);
     const totalWidth =
       stickers.length * targetSize +
-      Math.max(0, stickers.length - 1) * CLEANUP_TARGET_GAP;
+      Math.max(0, stickers.length - 1) * gap;
     const startX = Math.max(12, (layout.width - totalWidth) / 2);
     const trayTop = layout.height - trayHeight;
     const y = trayTop + (trayHeight - targetSize) / 2;
@@ -78,7 +100,7 @@ export default function WorldStickerBoard({
     return stickers.reduce<Record<string, { x: number; y: number; size: number }>>(
       (acc, sticker, index) => {
         acc[sticker.id] = {
-          x: startX + index * (targetSize + CLEANUP_TARGET_GAP),
+          x: startX + index * (targetSize + gap),
           y,
           size: targetSize,
         };
@@ -87,6 +109,11 @@ export default function WorldStickerBoard({
       {}
     );
   }, [layout.height, layout.width, stickers, trayHeight]);
+
+  const cleanupTargetSize = useMemo(() => {
+    const first = stickers[0] ? cleanupTrayTargets[stickers[0].id] : undefined;
+    return first?.size ?? TRAY_ITEM_SIZE;
+  }, [cleanupTrayTargets, stickers]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -217,11 +244,15 @@ export default function WorldStickerBoard({
                 name={sticker.name}
                 color={sticker.color}
                 imageSource={sticker.imageSource}
+                imageScale={sticker.imageScale}
+                imageOffsetY={sticker.imageOffsetY}
                 initialX={placed.x}
                 initialY={placed.y}
                 size={placedStickerSize}
                 bounds={dragBounds}
                 onRelease={handleStickerRelease}
+                glowColor={sticker.glowColor ?? sticker.color}
+                glowActive={mode === 'cleanup'}
               />
             );
           })}
@@ -256,6 +287,10 @@ export default function WorldStickerBoard({
         trayHeight={trayHeight}
         onStickerPress={handleTrayPress}
         mode={mode}
+        remainingStickerIds={remainingStickerIds}
+        cleanupTargetSize={cleanupTargetSize}
+        worldLabel={worldLabel}
+        theme={trayTheme}
       />
     </View>
   );

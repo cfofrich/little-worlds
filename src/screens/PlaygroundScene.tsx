@@ -3,19 +3,73 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import WorldStickerBoard from '../components/stickers/WorldStickerBoard';
-import { StickerDefinition } from '../components/stickers/types';
+import { StickerDefinition, StickerTrayTheme } from '../components/stickers/types';
 
 type PlaygroundSceneProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Playground'>;
 };
 
 const PLAYGROUND_STICKERS: StickerDefinition[] = [
-  { id: 'red-ball', name: 'Ball', color: '#EF4444', glowColor: '#F87171' },
-  { id: 'bear', name: 'Bear', color: '#A855F7', glowColor: '#C084FC' },
-  { id: 'truck', name: 'Truck', color: '#F59E0B', glowColor: '#FBBF24' },
-  { id: 'bucket', name: 'Bucket', color: '#EC4899', glowColor: '#F472B6' },
-  { id: 'kite', name: 'Kite', color: '#0EA5E9', glowColor: '#38BDF8' },
+  {
+    id: 'beach-ball',
+    name: 'Ball',
+    color: '#EF4444',
+    glowColor: '#F87171',
+    imageSource: require('../../assets/stickers/playground/beachball.png'),
+    imageScale: 1.45,
+  },
+  {
+    id: 'dump-truck',
+    name: 'Truck',
+    color: '#F59E0B',
+    glowColor: '#FBBF24',
+    imageSource: require('../../assets/stickers/playground/dumptrucktransparent.png'),
+    imageScale: 1.25,
+  },
+  {
+    id: 'slide',
+    name: 'Slide',
+    color: '#22C55E',
+    glowColor: '#4ADE80',
+    imageSource: require('../../assets/stickers/playground/slide.png'),
+    imageScale: 1.35,
+  },
+  {
+    id: 'tree',
+    name: 'Tree',
+    color: '#16A34A',
+    glowColor: '#4ADE80',
+    imageSource: require('../../assets/stickers/playground/tree.png'),
+    imageScale: 1.35,
+  },
+  {
+    id: 'toddler-boy',
+    name: 'Boy',
+    color: '#3B82F6',
+    glowColor: '#60A5FA',
+    imageSource: require('../../assets/stickers/playground/toddlerboy.png'),
+    imageScale: 1.95,
+    imageOffsetY: 2,
+  },
+  {
+    id: 'toddler-girl',
+    name: 'Girl',
+    color: '#EC4899',
+    glowColor: '#F472B6',
+    imageSource: require('../../assets/stickers/playground/toddlergirl.png'),
+    imageScale: 1.25,
+    imageOffsetY: 0,
+  },
 ];
+
+const PLAYGROUND_TRAY_THEME: StickerTrayTheme = {
+  trayBackground: 'rgba(209, 250, 229, 0.97)',
+  traySurface: 'rgba(240, 253, 244, 0.98)',
+  trayBorder: '#86EFAC',
+  trayLabelBackground: '#D1FAE5',
+  trayLabelText: '#166534',
+  cleanupSlotBackground: 'rgba(255, 255, 255, 0.88)',
+};
 
 export default function PlaygroundScene({ navigation }: PlaygroundSceneProps) {
   const insets = useSafeAreaInsets();
@@ -25,6 +79,8 @@ export default function PlaygroundScene({ navigation }: PlaygroundSceneProps) {
       backgroundSource={require('../../assets/backgrounds/playground.png')}
       stickers={PLAYGROUND_STICKERS}
       topInset={insets.top + 8}
+      worldLabel="Playground Stickers"
+      trayTheme={PLAYGROUND_TRAY_THEME}
     >
       <View pointerEvents="box-none" style={styles.container}>
         <TouchableOpacity

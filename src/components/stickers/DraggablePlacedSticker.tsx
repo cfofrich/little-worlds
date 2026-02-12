@@ -8,6 +8,8 @@ type DraggablePlacedStickerProps = {
   name: string;
   color: string;
   imageSource?: ImageSourcePropType;
+  imageScale?: number;
+  imageOffsetY?: number;
   initialX: number;
   initialY: number;
   size: number;
@@ -23,6 +25,8 @@ type DraggablePlacedStickerProps = {
     x: number;
     y: number;
   }) => void;
+  glowColor?: string;
+  glowActive?: boolean;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -35,11 +39,15 @@ export default function DraggablePlacedSticker({
   name,
   color,
   imageSource,
+  imageScale,
+  imageOffsetY,
   initialX,
   initialY,
   size,
   bounds,
   onRelease,
+  glowColor,
+  glowActive = false,
 }: DraggablePlacedStickerProps) {
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
 
@@ -112,11 +120,23 @@ export default function DraggablePlacedSticker({
           width: size,
           height: size,
           transform: [{ translateX: pan.x }, { translateY: pan.y }],
+          shadowColor: glowActive ? glowColor ?? color : '#000',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: glowActive ? 0.55 : 0.1,
+          shadowRadius: glowActive ? 10 : 2,
+          elevation: glowActive ? 7 : 2,
         },
       ]}
       {...panResponder.panHandlers}
     >
-      <StickerVisual size={size} name={name} color={color} imageSource={imageSource} />
+      <StickerVisual
+        size={size}
+        name={name}
+        color={color}
+        imageSource={imageSource}
+        imageScale={imageScale}
+        imageOffsetY={imageOffsetY}
+      />
     </Animated.View>
   );
 }

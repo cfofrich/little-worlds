@@ -5,6 +5,8 @@ type StickerVisualProps = {
   name: string;
   color: string;
   imageSource?: ImageSourcePropType;
+  imageScale?: number;
+  imageOffsetY?: number;
 };
 
 export default function StickerVisual({
@@ -12,11 +14,22 @@ export default function StickerVisual({
   name,
   color,
   imageSource,
+  imageScale = 1,
+  imageOffsetY = 0,
 }: StickerVisualProps) {
   if (imageSource) {
     return (
-      <View style={[styles.container, { width: size, height: size }]}>
-        <Image source={imageSource} style={styles.image} resizeMode="contain" />
+      <View style={[styles.imageShell, { width: size, height: size }]}>
+        <Image
+          source={imageSource}
+          style={[
+            styles.image,
+            {
+              transform: [{ scale: imageScale }, { translateY: imageOffsetY }],
+            },
+          ]}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -24,7 +37,7 @@ export default function StickerVisual({
   return (
     <View
       style={[
-        styles.container,
+        styles.fallbackShell,
         {
           width: size,
           height: size,
@@ -39,7 +52,22 @@ export default function StickerVisual({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  imageShell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    overflow: 'visible',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  fallbackShell: {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -50,10 +78,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
     overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
   },
   text: {
     color: '#FFFFFF',
