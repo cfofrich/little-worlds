@@ -3,14 +3,17 @@ import {
   Text,
   Image,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Animated,
   useWindowDimensions,
   ImageBackground,
+  Modal,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { useRef, useState, useEffect } from 'react';
+import * as MailComposer from 'expo-mail-composer';
 
 type Scene = {
   id: string;
@@ -55,6 +58,20 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // Cards stay where they are; title sits above them with its own positioning
   const carouselTop = (screenHeight - CARD_HEIGHT) / 2;
   const titleTop = carouselTop - TITLE_HEIGHT + Math.round(screenHeight * 0.05);
+
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const toggleSound = () => setSoundEnabled((prev) => !prev);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+
+  const handleFeedback = async () => {
+    const isAvailable = await MailComposer.isAvailableAsync();
+    if (isAvailable) {
+      await MailComposer.composeAsync({
+        recipients: ['littleworldsapp@proton.me'],
+        subject: 'Little Worlds Feedback',
+      });
+    }
+  };
 
   const scrollX = useRef(new Animated.Value(0)).current;
   const [centeredIndex, setCenteredIndex] = useState(0);
@@ -147,12 +164,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       style={styles.container}
       resizeMode="cover"
     >
-      {/* Gear icon top-right (visual only) */}
-      <View style={styles.header}>
+      {/* Gear icon top-right */}
+      <TouchableOpacity
+        style={styles.header}
+        onPress={() => setSettingsVisible(true)}
+        activeOpacity={0.7}
+      >
         <View style={styles.gearIcon}>
           <Text style={styles.gearText}>⚙️</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Title logo */}
       <Image
@@ -199,6 +220,56 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           extraData={centeredIndex}
         />
       </View>
+
+      {/* Settings Modal */}
+      <Modal
+        visible={settingsVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setSettingsVisible(false)}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Settings</Text>
+
+            <TouchableOpacity
+              style={styles.settingsRow}
+              onPress={toggleSound}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.settingsLabel}>Sound Effects</Text>
+              <View style={[
+                styles.toggleTrack,
+                { backgroundColor: soundEnabled ? '#95D5A0' : '#ccc' },
+              ]}>
+                <View style={[
+                  styles.toggleThumb,
+                  { alignSelf: soundEnabled ? 'flex-end' : 'flex-start' },
+                ]} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.feedbackButton}
+              onPress={handleFeedback}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.feedbackButtonText}>Send Feedback</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setSettingsVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.closeButtonText}>Done</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ImageBackground>
   );
 }
@@ -242,5 +313,78 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 28,
+    width: 320,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 24,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  settingsLabel: {
+    fontSize: 18,
+    color: '#333',
+  },
+  feedbackButton: {
+    backgroundColor: '#6BBFFF',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 20,
+    width: '100%',
+    alignItems: 'center',
+  },
+  feedbackButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  closeButton: {
+    marginTop: 16,
+    paddingVertical: 10,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: '#999',
+    fontWeight: '600',
+  },
+  toggleTrack: {
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
   },
 });
