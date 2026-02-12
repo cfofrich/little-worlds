@@ -1,9 +1,9 @@
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
   Animated,
   useWindowDimensions,
   ImageBackground,
@@ -47,6 +47,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   // Card height: landscape aspect ratio (16:10)
   const CARD_HEIGHT = Math.round(CARD_WIDTH * 0.625);
+
+  // Title logo sizing — scales with screen, smaller on phones
+  const TITLE_HEIGHT = Math.round(screenHeight * 0.35);
+  const TITLE_WIDTH = Math.round(screenWidth * (isTablet ? 0.6 : 0.7));
+
+  // Cards stay where they are; title sits above them with its own positioning
+  const carouselTop = (screenHeight - CARD_HEIGHT) / 2;
+  const titleTop = carouselTop - TITLE_HEIGHT + Math.round(screenHeight * 0.05);
 
   const scrollX = useRef(new Animated.Value(0)).current;
   const [centeredIndex, setCenteredIndex] = useState(0);
@@ -128,7 +136,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           >
             <Text style={styles.cardText}>{item.name}</Text>
           </Animated.View>
-          <Text style={styles.sceneName}>{item.name}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -136,7 +143,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   return (
     <ImageBackground
-      source={require('../../assets/backgrounds/homescreenbackground.png')}
+      source={require('../../assets/backgrounds/homescreenbackgroundtwo.png')}
       style={styles.container}
       resizeMode="cover"
     >
@@ -147,12 +154,26 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
       </View>
 
+      {/* Title logo */}
+      <Image
+        source={require('../../assets/backgrounds/littleworldstitle.png')}
+        style={{
+          position: 'absolute',
+          top: titleTop,
+          alignSelf: 'center',
+          width: TITLE_WIDTH,
+          height: TITLE_HEIGHT,
+        }}
+        resizeMode="contain"
+      />
+
+      {/* Card carousel */}
       <View
         style={{
           position: 'absolute',
           left: 0,
           right: 0,
-          top: (screenHeight - (CARD_HEIGHT + 60)) / 2,
+          top: carouselTop,
         }}
       >
         <Animated.FlatList
@@ -194,17 +215,15 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   gearIcon: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   gearText: {
     fontSize: 28,
-  },
-  carouselContainer: {
-    flex: 1,
-    justifyContent: 'center',
   },
   cardContainer: {
     alignItems: 'center',
@@ -223,11 +242,5 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
-  },
-  sceneName: {
-    marginTop: 16,
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
   },
 });
