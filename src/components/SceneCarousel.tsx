@@ -1,0 +1,196 @@
+import { useEffect, useRef } from 'react';
+import {
+  Animated,
+  ImageBackground,
+  ImageSourcePropType,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+type SceneItem = {
+  id: string;
+  name: string;
+  color: string;
+  imageSource?: ImageSourcePropType;
+};
+
+type SceneCarouselProps = {
+  scenes: SceneItem[];
+  centeredIndex: number;
+  onCenteredIndexChange: (index: number) => void;
+  onCardPress: (index: number, sceneId: string) => void;
+  cardWidth: number;
+  cardHeight: number;
+  snapInterval: number;
+  paddingHorizontal: number;
+  spacing: number;
+};
+
+export default function SceneCarousel({
+  scenes,
+  centeredIndex,
+  onCenteredIndexChange,
+  onCardPress,
+  cardWidth,
+  cardHeight,
+  snapInterval,
+  paddingHorizontal,
+  spacing,
+}: SceneCarouselProps) {
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    pulseAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(pulseAnim, {
+        toValue: 0.03,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulseAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [centeredIndex, pulseAnim]);
+
+  const handleMomentumScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>
+  ) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const maxIndex = Math.max(0, scenes.length - 1);
+    const nextIndex = Math.max(
+      0,
+      Math.min(maxIndex, Math.round(offsetX / snapInterval))
+    );
+
+    onCenteredIndexChange(nextIndex);
+  };
+
+  const renderCard = ({ item, index }: { item: SceneItem; index: number }) => {
+    const inputRange = [
+      (index - 1) * snapInterval,
+      index * snapInterval,
+      (index + 1) * snapInterval,
+    ];
+
+    const scale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.85, 1, 0.85],
+      extrapolate: 'clamp',
+    });
+
+    const opacity = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.6, 1, 0.6],
+      extrapolate: 'clamp',
+    });
+
+    const finalScale =
+      index === centeredIndex ? Animated.add(scale, pulseAnim) : scale;
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => onCardPress(index, item.id)}
+      >
+        <View style={[styles.cardContainer, { width: cardWidth }]}>
+          <Animated.View
+            style={[
+              styles.card,
+              {
+                width: cardWidth,
+                height: cardHeight,
+                transform: [{ scale: finalScale }],
+                opacity,
+              },
+            ]}
+          >
+            {item.imageSource ? (
+              <ImageBackground
+                source={item.imageSource}
+                style={styles.cardImage}
+                imageStyle={styles.cardImageInner}
+                resizeMode="cover"
+              >
+                <View style={styles.cardLabelOverlay}>
+                  <Text style={styles.cardText}>{item.name}</Text>
+                </View>
+              </ImageBackground>
+            ) : (
+              <View
+                style={[
+                  styles.cardImage,
+                  styles.cardImageInner,
+                  { backgroundColor: item.color },
+                ]}
+              >
+                <Text style={styles.cardText}>{item.name}</Text>
+              </View>
+            )}
+          </Animated.View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <Animated.FlatList
+      data={scenes}
+      renderItem={renderCard}
+      keyExtractor={(item) => item.id}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal }}
+      snapToInterval={snapInterval}
+      decelerationRate="fast"
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+        { useNativeDriver: true }
+      )}
+      onMomentumScrollEnd={handleMomentumScrollEnd}
+      scrollEventThrottle={16}
+      ItemSeparatorComponent={() => <View style={{ width: spacing }} />}
+      extraData={centeredIndex}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    alignItems: 'center',
+  },
+  card: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  cardText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  cardImage: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  cardImageInner: {
+    borderRadius: 24,
+  },
+  cardLabelOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+});
