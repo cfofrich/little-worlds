@@ -49,34 +49,42 @@ export default function SceneCarousel({
 }: SceneCarouselProps) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
+  const lastReportedIndexRef = useRef(centeredIndex);
 
   useEffect(() => {
     pulseAnim.setValue(0);
     Animated.sequence([
       Animated.timing(pulseAnim, {
         toValue: 0.03,
-        duration: 400,
+        duration: 360,
         useNativeDriver: true,
       }),
       Animated.timing(pulseAnim, {
         toValue: 0,
-        duration: 400,
+        duration: 360,
         useNativeDriver: true,
       }),
     ]).start();
   }, [centeredIndex, pulseAnim]);
 
-  const handleMomentumScrollEnd = (
-    event: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const maxIndex = Math.max(0, scenes.length - 1);
-    const nextIndex = Math.max(
-      0,
-      Math.min(maxIndex, Math.round(offsetX / snapInterval))
-    );
+  useEffect(() => {
+    lastReportedIndexRef.current = centeredIndex;
+  }, [centeredIndex]);
 
+  const reportCenteredIndexFromOffset = (offsetX: number) => {
+    const maxIndex = Math.max(0, scenes.length - 1);
+    const nextIndex = Math.max(0, Math.min(maxIndex, Math.round(offsetX / snapInterval)));
+
+    if (nextIndex === lastReportedIndexRef.current) {
+      return;
+    }
+
+    lastReportedIndexRef.current = nextIndex;
     onCenteredIndexChange(nextIndex);
+  };
+
+  const handleMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    reportCenteredIndexFromOffset(event.nativeEvent.contentOffset.x);
   };
 
   const renderCard = ({ item, index }: { item: SceneItem; index: number }) => {
@@ -98,14 +106,10 @@ export default function SceneCarousel({
       extrapolate: 'clamp',
     });
 
-    const finalScale =
-      index === centeredIndex ? Animated.add(scale, pulseAnim) : scale;
+    const finalScale = index === centeredIndex ? Animated.add(scale, pulseAnim) : scale;
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => onCardPress(index, item.id)}
-      >
+      <TouchableOpacity activeOpacity={0.9} onPress={() => onCardPress(index, item.id)}>
         <View style={[styles.cardContainer, { width: cardWidth }]}>
           <Animated.View
             style={[
@@ -126,24 +130,14 @@ export default function SceneCarousel({
                 resizeMode="cover"
               />
             ) : (
-              <View
-                style={[
-                  styles.cardImage,
-                  styles.cardImageInner,
-                  { backgroundColor: item.color },
-                ]}
-              >
+              <View style={[styles.cardImage, styles.cardImageInner, { backgroundColor: item.color }]}>
                 <Text style={styles.cardFallbackText}>{item.name}</Text>
               </View>
             )}
           </Animated.View>
           <View style={[styles.cardTitleContainer, { width: titleImageWidth, height: titleImageHeight }]}>
             {item.titleImageSource ? (
-              <Image
-                source={item.titleImageSource}
-                style={styles.cardTitleImage}
-                resizeMode="contain"
-              />
+              <Image source={item.titleImageSource} style={styles.cardTitleImage} resizeMode="contain" />
             ) : (
               <Text style={styles.cardText}>{item.name}</Text>
             )}
@@ -165,10 +159,12 @@ export default function SceneCarousel({
       removeClippedSubviews={false}
       snapToInterval={snapInterval}
       decelerationRate="fast"
-      onScroll={Animated.event(
-        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-        { useNativeDriver: true }
-      )}
+      onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+        useNativeDriver: true,
+        listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+          reportCenteredIndexFromOffset(event.nativeEvent.contentOffset.x);
+        },
+      })}
       onMomentumScrollEnd={handleMomentumScrollEnd}
       scrollEventThrottle={16}
       ItemSeparatorComponent={() => <View style={{ width: spacing }} />}
@@ -183,7 +179,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 0,
-    paddingTop: 0,
+    paddingTop: 18,
     paddingBottom: 0,
   },
   cardContainer: {

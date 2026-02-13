@@ -162,6 +162,10 @@ export default function DraggablePlacedSticker({
             onDragEnd?.();
           });
         },
+        onPanResponderTerminate: () => {
+          pan.flattenOffset();
+          onDragEnd?.();
+        },
       }),
     [
       bounds.maxX,

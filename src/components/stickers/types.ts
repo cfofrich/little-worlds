@@ -7,8 +7,6 @@ export type StickerDefinition = {
   glowColor?: string;
   imageSource?: ImageSourcePropType;
   imageScale?: number;
-  trayImageScale?: number;
-  fieldImageScale?: number;
   imageOffsetY?: number;
 };
 

@@ -17,7 +17,18 @@ type SettingsModalProps = {
   onToggleSound: () => void;
   onClose: () => void;
   onFeedbackPress: () => void;
+  onButtonPress?: () => void;
 };
+
+const BUILD_SUMMARY_LINES = [
+  'Little Worlds current build:',
+  '- 5 themed worlds wired (Playground, Beach, Construction, Farm, Space).',
+  '- Drag stickers from tray onto scene and drag back anytime to clean up.',
+  '- Manual cleanup plays a dedicated sound effect.',
+  '- Top utility bar with Home, Clean Up, and Settings.',
+  '- Dynamic home background transitions tied to selected world card.',
+  '- Credits section for sound attributions.',
+];
 
 export default function SettingsModal({
   visible,
@@ -25,98 +36,123 @@ export default function SettingsModal({
   onToggleSound,
   onClose,
   onFeedbackPress,
+  onButtonPress,
 }: SettingsModalProps) {
   const [showCredits, setShowCredits] = useState(false);
+  const [showBuildSummary, setShowBuildSummary] = useState(false);
+
+  const playButtonSound = () => {
+    onButtonPress?.();
+  };
+
+  const handleLinkPress = (url: string) => {
+    playButtonSound();
+    void Linking.openURL(url);
+  };
+
+  const handleClose = () => {
+    playButtonSound();
+    onClose();
+  };
+
+  const handleFeedbackPress = () => {
+    playButtonSound();
+    onFeedbackPress();
+  };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <Pressable style={styles.modalOverlay} onPress={handleClose}>
         <Pressable style={styles.modalCard} onPress={() => {}}>
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
             <Text style={styles.modalTitle}>Settings</Text>
 
             <View style={styles.settingsRow}>
               <Text style={styles.settingsLabel}>Sound Effects</Text>
               <Switch
                 value={soundEnabled}
-                onValueChange={onToggleSound}
+                onValueChange={() => {
+                  playButtonSound();
+                  onToggleSound();
+                }}
                 trackColor={{ false: '#D1D5DB', true: '#95D5A0' }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#D1D5DB"
               />
             </View>
 
-            <TouchableOpacity
-              style={styles.feedbackButton}
-              onPress={onFeedbackPress}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.feedbackButton} onPress={handleFeedbackPress} activeOpacity={0.85}>
               <Text style={styles.feedbackButtonText}>Send Feedback</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.creditsButton}
-              onPress={() => setShowCredits((prev) => !prev)}
-              activeOpacity={0.8}
+              style={styles.sectionButton}
+              onPress={() => {
+                playButtonSound();
+                setShowCredits((prev) => !prev);
+              }}
+              activeOpacity={0.85}
             >
-              <Text style={styles.creditsButtonText}>
-                {showCredits ? 'Hide Credits' : 'Credits'}
-              </Text>
+              <Text style={styles.sectionButtonText}>{showCredits ? 'Hide Credits' : 'Credits'}</Text>
             </TouchableOpacity>
 
             {showCredits ? (
-              <View style={styles.creditsSection}>
-                <Text style={styles.creditsTitle}>Credits</Text>
-                <Text style={styles.creditsText}>Sound Effects:</Text>
+              <View style={styles.panel}>
+                <Text style={styles.panelTitle}>Sound Effects:</Text>
+                <Text style={styles.panelText}>
+                  plop sound effect by Garuda1982 -- https://freesound.org/s/543183/ -- License: Attribution 4.0
+                </Text>
+                <Text style={styles.panelText}>
+                  LevelUp.wav by Kenneth_Cooney -- https://freesound.org/s/609335/ -- License: Creative Commons 0
+                </Text>
+
                 <TouchableOpacity
-                  onPress={() => Linking.openURL('https://freesound.org/s/543183/')}
-                  activeOpacity={0.8}
+                  style={styles.linkButton}
+                  onPress={() => handleLinkPress('https://freesound.org/s/543183/')}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.creditsLink}>
-                    plop sound effect by Garuda1982
-                  </Text>
+                  <Text style={styles.linkButtonText}>Open plop source</Text>
                 </TouchableOpacity>
-                <Text style={styles.creditsText}>
-                  https://freesound.org/s/543183/
-                </Text>
-                <Text style={styles.creditsText}>
-                  License: Attribution 4.0
-                </Text>
+
                 <TouchableOpacity
-                  onPress={() => Linking.openURL('https://freesound.org/s/609335/')}
-                  activeOpacity={0.8}
-                  style={styles.creditItemSpacing}
+                  style={styles.linkButton}
+                  onPress={() => handleLinkPress('https://freesound.org/s/609335/')}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.creditsLink}>
-                    LevelUp.wav by Kenneth_Cooney
-                  </Text>
+                  <Text style={styles.linkButtonText}>Open cleanup source</Text>
                 </TouchableOpacity>
-                <Text style={styles.creditsText}>
-                  https://freesound.org/s/609335/
-                </Text>
-                <Text style={styles.creditsText}>
-                  License: Creative Commons 0
-                </Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.sectionButton}
+              onPress={() => {
+                playButtonSound();
+                setShowBuildSummary((prev) => !prev);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.sectionButtonText}>
+                {showBuildSummary ? 'Hide Current Build Summary' : 'Current Build Summary'}
+              </Text>
+            </TouchableOpacity>
+
+            {showBuildSummary ? (
+              <View style={styles.panel}>
+                <ScrollView style={styles.summaryScroll} nestedScrollEnabled>
+                  {BUILD_SUMMARY_LINES.map((line) => (
+                    <Text key={line} style={styles.panelText}>
+                      {line}
+                    </Text>
+                  ))}
+                </ScrollView>
               </View>
             ) : null}
 
             <Text style={styles.aboutText}>Made with love for Mason & Emma</Text>
             <Text style={styles.versionText}>Little Worlds v1.0</Text>
 
-            <TouchableOpacity
-              style={styles.doneButton}
-              onPress={onClose}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.doneButton} onPress={handleClose} activeOpacity={0.85}>
               <Text style={styles.doneButtonText}>Done</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -137,11 +173,10 @@ const styles = StyleSheet.create({
   modalCard: {
     backgroundColor: '#fff',
     borderRadius: 24,
-    padding: 24,
-    width: '80%',
-    maxWidth: 420,
-    minWidth: 300,
-    alignItems: 'stretch',
+    width: '82%',
+    maxWidth: 560,
+    maxHeight: '84%',
+    minWidth: 320,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
@@ -152,14 +187,17 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    alignItems: 'center',
-    paddingBottom: 4,
+    alignItems: 'stretch',
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 18,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 20,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   settingsRow: {
     flexDirection: 'row',
@@ -169,17 +207,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   settingsLabel: {
     fontSize: 18,
     color: '#333',
+    fontWeight: '600',
   },
   feedbackButton: {
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    marginTop: 16,
+    marginTop: 6,
     width: '100%',
     alignItems: 'center',
     borderWidth: 2,
@@ -187,10 +226,10 @@ const styles = StyleSheet.create({
   },
   feedbackButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6BBFFF',
+    fontWeight: '700',
+    color: '#0284c7',
   },
-  creditsButton: {
+  sectionButton: {
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -198,66 +237,70 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#A78BFA',
+    borderColor: '#94a3b8',
+    backgroundColor: '#f8fafc',
   },
-  creditsButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#7C3AED',
-  },
-  creditsSection: {
-    width: '100%',
-    marginTop: 12,
-    borderRadius: 14,
-    backgroundColor: '#F7FAFC',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  },
-  creditsTitle: {
-    fontSize: 17,
+  sectionButtonText: {
+    fontSize: 15,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#334155',
+  },
+  panel: {
+    marginTop: 10,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+  },
+  panelTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
     marginBottom: 8,
   },
-  creditsText: {
+  panelText: {
     fontSize: 13,
-    color: '#374151',
+    color: '#334155',
     lineHeight: 18,
+    marginBottom: 4,
   },
-  creditsLink: {
+  summaryScroll: {
+    maxHeight: 150,
+  },
+  linkButton: {
+    marginTop: 6,
+  },
+  linkButtonText: {
+    color: '#1d4ed8',
     fontSize: 13,
-    color: '#2563EB',
+    fontWeight: '700',
     textDecorationLine: 'underline',
-    marginBottom: 2,
-  },
-  creditItemSpacing: {
-    marginTop: 8,
   },
   doneButton: {
     backgroundColor: '#95D5A0',
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 24,
-    marginTop: 18,
+    marginTop: 16,
     width: '100%',
     alignItems: 'center',
   },
   doneButtonText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#fff',
   },
   aboutText: {
-    fontSize: 15,
-    color: '#999',
+    fontSize: 14,
+    color: '#64748b',
     marginTop: 16,
     textAlign: 'center',
   },
   versionText: {
-    fontSize: 13,
-    color: '#BBB',
+    fontSize: 12,
+    color: '#94a3b8',
     marginTop: 4,
+    textAlign: 'center',
   },
 });

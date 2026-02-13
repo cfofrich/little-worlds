@@ -1,18 +1,12 @@
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import BlankWorldScene from './BlankWorldScene';
+import WorldSceneShell from '../components/world/WorldSceneShell';
+import { getWorldConfig } from '../data/worlds';
 
 type ConstructionSceneProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Construction'>;
 };
 
 export default function ConstructionScene({ navigation }: ConstructionSceneProps) {
-  return (
-    <BlankWorldScene
-      navigation={navigation}
-      worldLabel="Construction Stickers"
-      backgroundColor="#FFF3D0"
-    />
-  );
+  return <WorldSceneShell navigation={navigation} world={getWorldConfig('construction')} />;
 }
-

@@ -3,15 +3,13 @@ import {
   Animated,
   Easing,
   Image,
-  ImageSourcePropType,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as MailComposer from 'expo-mail-composer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
@@ -19,54 +17,7 @@ import SceneCarousel from '../components/SceneCarousel';
 import SettingsModal from '../components/SettingsModal';
 import { useHomeLayoutMetrics, SPACING } from '../hooks/useHomeLayoutMetrics';
 import { useSound } from '../context/SoundContext';
-
-type Scene = {
-  id: string;
-  name: string;
-  color: string;
-  imageSource?: ImageSourcePropType;
-  titleImageSource?: ImageSourcePropType;
-  homeBackgroundSource: ImageSourcePropType;
-};
-
-const SCENES: Scene[] = [
-  {
-    id: 'playground',
-    name: 'Playground',
-    color: '#FFB84D',
-    imageSource: require('../../assets/backgrounds/playground.png'),
-    titleImageSource: require('../../assets/worldtitles/playground.png'),
-    homeBackgroundSource: require('../../assets/backgrounds/backgrounds_homescreen/playground.png'),
-  },
-  {
-    id: 'beach',
-    name: 'Beach',
-    color: '#6BBFFF',
-    titleImageSource: require('../../assets/worldtitles/beach.png'),
-    homeBackgroundSource: require('../../assets/backgrounds/backgrounds_homescreen/beach.png'),
-  },
-  {
-    id: 'construction',
-    name: 'Construction',
-    color: '#FFD93D',
-    titleImageSource: require('../../assets/worldtitles/construction.png'),
-    homeBackgroundSource: require('../../assets/backgrounds/backgrounds_homescreen/construction.png'),
-  },
-  {
-    id: 'farm',
-    name: 'Farm',
-    color: '#95D5A0',
-    titleImageSource: require('../../assets/worldtitles/farm.png'),
-    homeBackgroundSource: require('../../assets/backgrounds/backgrounds_homescreen/farm.png'),
-  },
-  {
-    id: 'space',
-    name: 'Space',
-    color: '#A78BFA',
-    titleImageSource: require('../../assets/worldtitles/space.png'),
-    homeBackgroundSource: require('../../assets/backgrounds/backgrounds_homescreen/space.png'),
-  },
-];
+import { HOME_SCENES } from '../data/worlds';
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -98,25 +49,26 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const activeLayerRef = useRef<'A' | 'B'>('A');
   const activeBackgroundIndexRef = useRef(0);
   const transitionIdRef = useRef(0);
+  const logoPulse = useRef(new Animated.Value(1)).current;
+
+  const scenes = useMemo(() => HOME_SCENES, []);
 
   useEffect(() => {
     let cancelled = false;
 
     const preloadBackgrounds = async () => {
-      const preloadTasks = SCENES.map((scene) => {
-        if (typeof scene.homeBackgroundSource === 'number' || scene.homeBackgroundSource) {
-          const resolved = Image.resolveAssetSource(scene.homeBackgroundSource);
-          if (resolved?.uri) {
-            return Image.prefetch(resolved.uri);
-          }
+      const preloadTasks = scenes.map((scene) => {
+        const resolved = Image.resolveAssetSource(scene.homeBackgroundSource);
+        if (resolved?.uri) {
+          return Image.prefetch(resolved.uri);
         }
-        return Promise.resolve();
+        return Promise.resolve(false);
       });
 
       try {
         await Promise.all(preloadTasks);
       } catch {
-        // Non-blocking: transitions still work, this only improves smoothness.
+        // Non-blocking fallback.
       }
 
       if (cancelled) {
@@ -124,12 +76,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       }
     };
 
-    preloadBackgrounds();
+    void preloadBackgrounds();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scenes]);
 
   useEffect(() => {
     if (centeredIndex === activeBackgroundIndexRef.current) {
@@ -183,87 +135,103 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     });
   };
 
-  const handleCardPress = (index: number, sceneId: string) => {
-    if (index !== centeredIndex) {
+  const handleCardPress = (index: number, routeName: keyof RootStackParamList) => {
+    if (index !== centeredIndex || routeName === 'Home') {
       return;
     }
+
     void playPlop();
-    if (sceneId === 'playground') navigation.navigate('Playground');
-    if (sceneId === 'beach') navigation.navigate('Beach');
-    if (sceneId === 'construction') navigation.navigate('Construction');
-    if (sceneId === 'farm') navigation.navigate('Farm');
-    if (sceneId === 'space') navigation.navigate('Space');
+    navigation.navigate(routeName);
+  };
+
+  const handleLogoPress = () => {
+    logoPulse.setValue(1);
+    Animated.sequence([
+      Animated.timing(logoPulse, {
+        toValue: 0.92,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoPulse, {
+        toValue: 1.1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoPulse, {
+        toValue: 1,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    void playPlop();
   };
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.backgroundOverlay, { opacity: layerAOpacity }]} pointerEvents="none">
-        <Image
-          source={SCENES[layerAIndex].homeBackgroundSource}
-          style={styles.backgroundLayer}
-          resizeMode="cover"
-        />
+        <Image source={scenes[layerAIndex].homeBackgroundSource} style={styles.backgroundLayer} resizeMode="cover" />
       </Animated.View>
       <Animated.View style={[styles.backgroundOverlay, { opacity: layerBOpacity }]} pointerEvents="none">
-        <Image
-          source={SCENES[layerBIndex].homeBackgroundSource}
-          style={styles.backgroundLayer}
-          resizeMode="cover"
-        />
+        <Image source={scenes[layerBIndex].homeBackgroundSource} style={styles.backgroundLayer} resizeMode="cover" />
       </Animated.View>
+
       <View style={styles.contentLayer}>
-      <TouchableOpacity
-        style={[styles.header, { top: insets.top + 8 }]}
-        onPress={() => setSettingsVisible(true)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.gearIcon}>
-          <Text style={styles.gearText}>⚙️</Text>
+        <TouchableOpacity
+          style={[styles.header, { top: insets.top + 8 }]}
+          onPress={() => {
+            void playPlop();
+            setSettingsVisible(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <View style={styles.gearIcon}>
+            <Animated.Text style={styles.gearText}>⚙️</Animated.Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={{ position: 'absolute', top: titleTop, alignSelf: 'center' }} onPress={handleLogoPress} activeOpacity={0.9}>
+          <Animated.View style={{ transform: [{ scale: logoPulse }] }}>
+            <Image
+              source={require('../../assets/backgrounds/littleworldstitle.png')}
+              style={{ width: Math.round(titleWidth * 1.18), height: Math.round(titleHeight * 1.18) }}
+              resizeMode="contain"
+            />
+          </Animated.View>
+        </TouchableOpacity>
+
+        <View style={{ position: 'absolute', left: 0, right: 0, top: carouselTop }}>
+          <SceneCarousel
+            scenes={scenes}
+            centeredIndex={centeredIndex}
+            onCenteredIndexChange={setCenteredIndex}
+            onCardPress={(index, sceneId) => {
+              const scene = scenes.find((item) => item.id === sceneId);
+              if (!scene) {
+                return;
+              }
+              handleCardPress(index, scene.routeName);
+            }}
+            cardWidth={cardWidth}
+            cardHeight={cardHeight}
+            snapInterval={snapInterval}
+            paddingHorizontal={paddingHorizontal}
+            spacing={SPACING}
+            titleImageWidth={Math.round(cardWidth * 0.96)}
+            titleImageHeight={Math.round(cardHeight * 0.48)}
+          />
         </View>
-      </TouchableOpacity>
 
-      <Image
-        source={require('../../assets/backgrounds/littleworldstitle.png')}
-        style={{
-          position: 'absolute',
-          top: titleTop,
-          alignSelf: 'center',
-          width: titleWidth,
-          height: titleHeight,
-        }}
-        resizeMode="contain"
-      />
-
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: carouselTop,
-        }}
-      >
-        <SceneCarousel
-          scenes={SCENES}
-          centeredIndex={centeredIndex}
-          onCenteredIndexChange={setCenteredIndex}
-          onCardPress={handleCardPress}
-          cardWidth={cardWidth}
-          cardHeight={cardHeight}
-          snapInterval={snapInterval}
-          paddingHorizontal={paddingHorizontal}
-          spacing={SPACING}
-          titleImageWidth={Math.round(cardWidth * 0.92)}
-          titleImageHeight={Math.round(cardHeight * 0.36)}
+        <SettingsModal
+          visible={settingsVisible}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
+          onClose={() => setSettingsVisible(false)}
+          onFeedbackPress={handleFeedback}
+          onButtonPress={() => {
+            void playPlop();
+          }}
         />
-      </View>
-
-      <SettingsModal
-        visible={settingsVisible}
-        soundEnabled={soundEnabled}
-        onToggleSound={toggleSound}
-        onClose={() => setSettingsVisible(false)}
-        onFeedbackPress={handleFeedback}
-      />
       </View>
     </View>
   );
@@ -289,14 +257,16 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   gearIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.72)',
   },
   gearText: {
-    fontSize: 28,
+    fontSize: 32,
   },
 });

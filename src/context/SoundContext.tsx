@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { InteractionManager } from 'react-native';
 
 type SoundContextType = {
   soundEnabled: boolean;
@@ -17,17 +16,22 @@ const SoundContext = createContext<SoundContextType>({
   playCleanup: async () => {},
 });
 
+type LoadedAudio = {
+  Audio: any;
+  plopSound: any;
+  cleanupSound: any;
+};
+
 export function SoundProvider({ children }: { children: ReactNode }) {
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const plopSoundRef = useRef<any>(null);
-  const cleanupSoundRef = useRef<any>(null);
+  const loadedAudioRef = useRef<LoadedAudio | null>(null);
   const loadingPromiseRef = useRef<Promise<void> | null>(null);
-  const loadedRef = useRef(false);
 
   const ensureSoundsLoaded = async () => {
-    if (loadedRef.current) {
+    if (loadedAudioRef.current) {
       return;
     }
+
     if (loadingPromiseRef.current) {
       await loadingPromiseRef.current;
       return;
@@ -36,36 +40,38 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     loadingPromiseRef.current = (async () => {
       try {
         const expoAv = require('expo-av');
-        if (!expoAv?.Audio?.Sound) {
+        const Audio = expoAv?.Audio;
+        if (!Audio?.Sound) {
           return;
         }
 
-        // Configure audio mode once for reliable effects playback.
-        await expoAv.Audio.setAudioModeAsync({
+        await Audio.setAudioModeAsync({
           playsInSilentModeIOS: true,
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
         });
 
-        const plopSound = new expoAv.Audio.Sound();
+        const plopSound = new Audio.Sound();
         await plopSound.loadAsync(
           require('../../assets/sounds/stickerplacement.wav'),
           { shouldPlay: false },
           true
         );
 
-        const cleanupSound = new expoAv.Audio.Sound();
+        const cleanupSound = new Audio.Sound();
         await cleanupSound.loadAsync(
           require('../../assets/sounds/stickercleanup.wav'),
           { shouldPlay: false },
           true
         );
 
-        plopSoundRef.current = plopSound;
-        cleanupSoundRef.current = cleanupSound;
-        loadedRef.current = true;
+        loadedAudioRef.current = {
+          Audio,
+          plopSound,
+          cleanupSound,
+        };
       } catch {
-        // Non-blocking fallback when audio module is unavailable.
+        // Non-blocking fallback when audio cannot initialize.
       } finally {
         loadingPromiseRef.current = null;
       }
@@ -75,32 +81,43 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    void ensureSoundsLoaded();
+
     return () => {
-      const plopSound = plopSoundRef.current;
-      const cleanupSound = cleanupSoundRef.current;
-      plopSoundRef.current = null;
-      cleanupSoundRef.current = null;
-      if (plopSound?.unloadAsync) {
-        void plopSound.unloadAsync().catch(() => {});
+      const loadedAudio = loadedAudioRef.current;
+      loadedAudioRef.current = null;
+      if (!loadedAudio) {
+        return;
       }
-      if (cleanupSound?.unloadAsync) {
-        void cleanupSound.unloadAsync().catch(() => {});
+
+      if (loadedAudio.plopSound?.unloadAsync) {
+        void loadedAudio.plopSound.unloadAsync().catch(() => {});
+      }
+
+      if (loadedAudio.cleanupSound?.unloadAsync) {
+        void loadedAudio.cleanupSound.unloadAsync().catch(() => {});
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!soundEnabled || loadedRef.current) {
+    if (soundEnabled) {
       return;
     }
 
-    const task = InteractionManager.runAfterInteractions(() => {
-      void ensureSoundsLoaded();
-    });
+    const loadedAudio = loadedAudioRef.current;
+    if (!loadedAudio) {
+      return;
+    }
 
-    return () => {
-      task.cancel();
-    };
+    [loadedAudio.plopSound, loadedAudio.cleanupSound].forEach((sound) => {
+      if (!sound?.stopAsync || !sound?.setPositionAsync) {
+        return;
+      }
+      void sound.stopAsync().catch(() => {});
+      void sound.setPositionAsync(0).catch(() => {});
+    });
   }, [soundEnabled]);
 
   const toggleSound = () => {
@@ -111,52 +128,53 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     if (!soundEnabled) {
       return;
     }
+
     await playFn();
   };
 
-  const playPlop = async () => {
-    if (!loadedRef.current) {
-      void ensureSoundsLoaded();
-      return;
-    }
-    const sound = plopSoundRef.current;
-    if (!sound?.playFromPositionAsync) {
+  const playSound = async (type: 'plop' | 'cleanup') => {
+    if (!soundEnabled) {
       return;
     }
 
-    await playIfEnabled(() => sound.playFromPositionAsync(0));
+    if (!loadedAudioRef.current) {
+      await ensureSoundsLoaded();
+    }
+
+    const loadedAudio = loadedAudioRef.current;
+    const sound = type === 'plop' ? loadedAudio?.plopSound : loadedAudio?.cleanupSound;
+
+    if (!sound) {
+      return;
+    }
+
+    if (sound.replayAsync) {
+      void sound.replayAsync().catch(() => {});
+      return;
+    }
+
+    if (sound.playFromPositionAsync) {
+      void sound.playFromPositionAsync(0).catch(() => {});
+    }
+  };
+
+  const playPlop = async () => {
+    await playSound('plop');
   };
 
   const playCleanup = async () => {
-    if (!loadedRef.current) {
-      void ensureSoundsLoaded();
-      return;
-    }
-    const sound = cleanupSoundRef.current;
-    if (!sound?.playFromPositionAsync) {
-      return;
-    }
-
-    await playIfEnabled(() => sound.playFromPositionAsync(0));
+    await playSound('cleanup');
   };
-
-  useEffect(() => {
-    if (soundEnabled) {
-      return;
-    }
-
-    [plopSoundRef.current, cleanupSoundRef.current].forEach((sound) => {
-      if (!sound?.stopAsync || !sound?.setPositionAsync) {
-        return;
-      }
-      void sound.stopAsync().catch(() => {});
-      void sound.setPositionAsync(0).catch(() => {});
-    });
-  }, [soundEnabled]);
 
   return (
     <SoundContext.Provider
-      value={{ soundEnabled, toggleSound, playIfEnabled, playPlop, playCleanup }}
+      value={{
+        soundEnabled,
+        toggleSound,
+        playIfEnabled,
+        playPlop,
+        playCleanup,
+      }}
     >
       {children}
     </SoundContext.Provider>
