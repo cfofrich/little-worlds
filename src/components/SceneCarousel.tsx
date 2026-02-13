@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import {
   Animated,
+  Image,
   ImageBackground,
   ImageSourcePropType,
   NativeScrollEvent,
@@ -16,6 +17,7 @@ type SceneItem = {
   name: string;
   color: string;
   imageSource?: ImageSourcePropType;
+  titleImageSource?: ImageSourcePropType;
 };
 
 type SceneCarouselProps = {
@@ -28,6 +30,8 @@ type SceneCarouselProps = {
   snapInterval: number;
   paddingHorizontal: number;
   spacing: number;
+  titleImageWidth?: number;
+  titleImageHeight?: number;
 };
 
 export default function SceneCarousel({
@@ -40,6 +44,8 @@ export default function SceneCarousel({
   snapInterval,
   paddingHorizontal,
   spacing,
+  titleImageWidth = 220,
+  titleImageHeight = 66,
 }: SceneCarouselProps) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -118,11 +124,7 @@ export default function SceneCarousel({
                 style={styles.cardImage}
                 imageStyle={styles.cardImageInner}
                 resizeMode="cover"
-              >
-                <View style={styles.cardLabelOverlay}>
-                  <Text style={styles.cardText}>{item.name}</Text>
-                </View>
-              </ImageBackground>
+              />
             ) : (
               <View
                 style={[
@@ -131,10 +133,21 @@ export default function SceneCarousel({
                   { backgroundColor: item.color },
                 ]}
               >
-                <Text style={styles.cardText}>{item.name}</Text>
+                <Text style={styles.cardFallbackText}>{item.name}</Text>
               </View>
             )}
           </Animated.View>
+          <View style={[styles.cardTitleContainer, { width: titleImageWidth, height: titleImageHeight }]}>
+            {item.titleImageSource ? (
+              <Image
+                source={item.titleImageSource}
+                style={styles.cardTitleImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <Text style={styles.cardText}>{item.name}</Text>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -147,7 +160,9 @@ export default function SceneCarousel({
       keyExtractor={(item) => item.id}
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal }}
+      contentContainerStyle={[styles.listContent, { paddingHorizontal }]}
+      style={styles.list}
+      removeClippedSubviews={false}
       snapToInterval={snapInterval}
       decelerationRate="fast"
       onScroll={Animated.event(
@@ -163,8 +178,18 @@ export default function SceneCarousel({
 }
 
 const styles = StyleSheet.create({
+  list: {
+    overflow: 'visible',
+  },
+  listContent: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
   cardContainer: {
     alignItems: 'center',
+    paddingTop: 0,
+    overflow: 'visible',
   },
   card: {
     borderRadius: 24,
@@ -175,7 +200,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  cardTitleContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitleImage: {
+    width: '100%',
+    height: '100%',
+  },
   cardText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#184F42',
+  },
+  cardFallbackText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
@@ -186,11 +225,5 @@ const styles = StyleSheet.create({
   },
   cardImageInner: {
     borderRadius: 24,
-  },
-  cardLabelOverlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.28)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: 'center',
   },
 });

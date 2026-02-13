@@ -1,32 +1,42 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Image,
   ImageBackground,
   ImageSourcePropType,
   LayoutChangeEvent,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import DraggablePlacedSticker from './DraggablePlacedSticker';
-import StickerTray, { CLEANUP_TARGET_GAP, TRAY_ITEM_SIZE } from './StickerTray';
+import StickerTray, { TRAY_ITEM_SIZE } from './StickerTray';
+import StickerVisual from './StickerVisual';
 import { PlacedSticker, StickerDefinition, StickerTrayTheme } from './types';
+import { useSound } from '../../context/SoundContext';
 
 type WorldStickerBoardProps = {
-  backgroundSource: ImageSourcePropType;
+  backgroundSource?: ImageSourcePropType;
+  backgroundColor?: string;
   stickers: StickerDefinition[];
   trayHeight?: number;
   placedStickerSize?: number;
-  topInset?: number;
   worldLabel?: string;
   trayTheme?: StickerTrayTheme;
+  trayAssetSource?: ImageSourcePropType;
+  trayContentOffsetY?: number;
   children?: ReactNode;
 };
 
-type Mode = 'creative' | 'cleanup';
+type ActiveTrayDrag = {
+  stickerId: string;
+  x: number;
+  y: number;
+};
 
 const DEFAULT_TRAY_HEIGHT = 146;
 const DEFAULT_STICKER_SIZE = 88;
+const TRAY_HORIZONTAL_INSET = 44;
+const CLEANUP_RETURN_DEPTH = 42;
 const DEFAULT_TRAY_THEME: StickerTrayTheme = {
   trayBackground: 'rgba(220, 248, 236, 0.96)',
   traySurface: 'rgba(243, 253, 247, 0.98)',
@@ -42,18 +52,23 @@ function clamp(value: number, min: number, max: number) {
 
 export default function WorldStickerBoard({
   backgroundSource,
+  backgroundColor = '#DFF2FF',
   stickers,
   trayHeight = DEFAULT_TRAY_HEIGHT,
   placedStickerSize = DEFAULT_STICKER_SIZE,
-  topInset = 12,
   worldLabel,
   trayTheme = DEFAULT_TRAY_THEME,
+  trayAssetSource,
+  trayContentOffsetY = 0,
   children,
 }: WorldStickerBoardProps) {
+  const { playPlop, playCleanup } = useSound();
   const [layout, setLayout] = useState({ width: 0, height: 0 });
   const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
-  const [mode, setMode] = useState<Mode>('creative');
   const [showCelebration, setShowCelebration] = useState(false);
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  const [activeTrayDrag, setActiveTrayDrag] = useState<ActiveTrayDrag | null>(null);
+  const [activePlacedDragStickerId, setActivePlacedDragStickerId] = useState<string | null>(null);
 
   const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -72,89 +87,76 @@ export default function WorldStickerBoard({
     }, {});
   }, [stickers]);
 
-  const playAreaHeight = Math.max(0, layout.height - trayHeight);
-  const remainingStickerIds = useMemo(
-    () => new Set(placedStickers.map((item) => item.stickerId)),
-    [placedStickers]
-  );
-
-  const cleanupTrayTargets = useMemo(() => {
-    if (!layout.width || !layout.height || !stickers.length) {
-      return {} as Record<string, { x: number; y: number; size: number }>;
-    }
-
-    const availableWidth = layout.width - 28;
-    const gap = CLEANUP_TARGET_GAP;
-    const maxFitSize = Math.floor(
-      (availableWidth - gap * Math.max(0, stickers.length - 1)) /
-        Math.max(1, stickers.length)
-    );
-    const targetSize = clamp(maxFitSize, 46, TRAY_ITEM_SIZE);
-    const totalWidth =
-      stickers.length * targetSize +
-      Math.max(0, stickers.length - 1) * gap;
-    const startX = Math.max(12, (layout.width - totalWidth) / 2);
-    const trayTop = layout.height - trayHeight;
-    const y = trayTop + (trayHeight - targetSize) / 2;
-
-    return stickers.reduce<Record<string, { x: number; y: number; size: number }>>(
-      (acc, sticker, index) => {
-        acc[sticker.id] = {
-          x: startX + index * (targetSize + gap),
-          y,
-          size: targetSize,
-        };
-        return acc;
-      },
-      {}
-    );
-  }, [layout.height, layout.width, stickers, trayHeight]);
-
-  const cleanupTargetSize = useMemo(() => {
-    const first = stickers[0] ? cleanupTrayTargets[stickers[0].id] : undefined;
-    return first?.size ?? TRAY_ITEM_SIZE;
-  }, [cleanupTrayTargets, stickers]);
+  const trayTopY = Math.max(0, layout.height - trayHeight);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setLayout({ width, height });
   };
 
-  const handleTrayPress = (stickerId: string) => {
-    if (mode !== 'creative' || !layout.width || !playAreaHeight) {
+  const handleTrayDragStart = (stickerId: string, x: number, y: number) => {
+    setActiveTrayDrag({ stickerId, x, y });
+  };
+
+  const handleTrayDragMove = (stickerId: string, x: number, y: number) => {
+    setActiveTrayDrag((current) => {
+      if (!current || current.stickerId !== stickerId) {
+        return { stickerId, x, y };
+      }
+      return { ...current, x, y };
+    });
+  };
+
+  const handleTrayDragEnd = (stickerId: string, x: number, y: number) => {
+    setActiveTrayDrag(null);
+
+    if (!layout.width || !layout.height) {
       return;
     }
 
-    const baseX = layout.width / 2 - placedStickerSize / 2;
-    const randomOffset = (Math.random() - 0.5) * 60;
-    const maxX = Math.max(12, layout.width - placedStickerSize - 12);
+    // Dropped in tray region: no-op.
+    if (y >= trayTopY) {
+      return;
+    }
 
     const newSticker: PlacedSticker = {
       instanceId: `${stickerId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       stickerId,
-      x: clamp(baseX + randomOffset, 12, maxX),
-      y: Math.max(12, playAreaHeight - placedStickerSize - 24),
+      x: clamp(x - placedStickerSize / 2, 0, Math.max(0, layout.width - placedStickerSize)),
+      y: clamp(y - placedStickerSize / 2, 0, Math.max(0, layout.height - placedStickerSize)),
     };
 
     setPlacedStickers((current) => [...current, newSticker]);
+    void playPlop();
   };
 
-  const handleModeToggle = () => {
-    if (mode === 'creative') {
-      if (!placedStickers.length) {
-        return;
-      }
-      setMode('cleanup');
-      return;
-    }
+  const handleRemoveAnimationComplete = (instanceId: string) => {
+    setPlacedStickers((current) => {
+      const next = current.filter((item) => item.instanceId !== instanceId);
 
-    setMode('creative');
+      if (next.length === 0 && current.length > 0) {
+        setShowCelebration(true);
+        if (cleanupTimerRef.current) {
+          clearTimeout(cleanupTimerRef.current);
+        }
+        cleanupTimerRef.current = setTimeout(() => {
+          setShowCelebration(false);
+        }, 950);
+      }
+
+      return next;
+    });
+
+    setRemovingIds((current) => {
+      const next = new Set(current);
+      next.delete(instanceId);
+      return next;
+    });
   };
 
   const handleStickerRelease = ({
-    instanceId,
-    stickerId,
     x,
+    instanceId,
     y,
   }: {
     instanceId: string;
@@ -162,72 +164,55 @@ export default function WorldStickerBoard({
     x: number;
     y: number;
   }) => {
-    if (mode !== 'cleanup') {
-      return;
-    }
-
-    const target = cleanupTrayTargets[stickerId];
-    if (!target) {
-      return;
-    }
-
     const stickerCenterX = x + placedStickerSize / 2;
     const stickerCenterY = y + placedStickerSize / 2;
 
-    const withinX =
-      stickerCenterX >= target.x - target.size * 0.25 &&
-      stickerCenterX <= target.x + target.size * 1.25;
-    const withinY =
-      stickerCenterY >= target.y - target.size * 0.25 &&
-      stickerCenterY <= target.y + target.size * 1.25;
-
-    if (!withinX || !withinY) {
+    if (stickerCenterY < trayTopY + CLEANUP_RETURN_DEPTH) {
       return;
     }
 
-    let shouldCelebrate = false;
+    // Prevent accidental cleanup when dragging near lower corners/outside tray.
+    if (
+      stickerCenterX < TRAY_HORIZONTAL_INSET ||
+      stickerCenterX > layout.width - TRAY_HORIZONTAL_INSET
+    ) {
+      return;
+    }
 
-    setPlacedStickers((current) => {
-      const next = current.filter((item) => item.instanceId !== instanceId);
-      shouldCelebrate = current.length > 0 && next.length === 0;
+    setRemovingIds((current) => {
+      if (current.has(instanceId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(instanceId);
+      void playCleanup();
       return next;
     });
-
-    if (!shouldCelebrate) {
-      return;
-    }
-
-    setShowCelebration(true);
-
-    if (cleanupTimerRef.current) {
-      clearTimeout(cleanupTimerRef.current);
-    }
-
-    cleanupTimerRef.current = setTimeout(() => {
-      setShowCelebration(false);
-      setMode('creative');
-    }, 950);
   };
 
   const dragBounds = {
     minX: 0,
     maxX: Math.max(0, layout.width - placedStickerSize),
     minY: 0,
-    maxY:
-      mode === 'creative'
-        ? Math.max(0, playAreaHeight - placedStickerSize)
-        : Math.max(0, layout.height - placedStickerSize),
+    maxY: Math.max(0, layout.height - placedStickerSize),
   };
+
+  const activeDragSticker = activeTrayDrag
+    ? stickerMap[activeTrayDrag.stickerId]
+    : undefined;
 
   return (
     <View style={styles.container} onLayout={handleLayout}>
-      <View style={[styles.playArea, { bottom: trayHeight }]}>
-        <View style={styles.backgroundBase} />
-        <ImageBackground
-          source={backgroundSource}
-          style={styles.backgroundImage}
-          resizeMode="cover"
-        />
+      <View style={styles.playArea}>
+        <View style={[styles.backgroundBase, { backgroundColor }]} />
+        {backgroundSource ? (
+          <ImageBackground
+            source={backgroundSource}
+            style={styles.backgroundImage}
+            imageStyle={styles.backgroundImageAsset}
+            resizeMode="cover"
+          />
+        ) : null}
 
         <View style={styles.playLayer} pointerEvents="box-none">
           {placedStickers.map((placed) => {
@@ -244,7 +229,7 @@ export default function WorldStickerBoard({
                 name={sticker.name}
                 color={sticker.color}
                 imageSource={sticker.imageSource}
-                imageScale={sticker.imageScale}
+                imageScale={sticker.fieldImageScale ?? sticker.imageScale}
                 imageOffsetY={sticker.imageOffsetY}
                 initialX={placed.x}
                 initialY={placed.y}
@@ -252,32 +237,55 @@ export default function WorldStickerBoard({
                 bounds={dragBounds}
                 onRelease={handleStickerRelease}
                 glowColor={sticker.glowColor ?? sticker.color}
-                glowActive={mode === 'cleanup'}
+                glowActive={false}
+                isRemoving={removingIds.has(placed.instanceId)}
+                onRemoveAnimationComplete={handleRemoveAnimationComplete}
+                popOnMount
+                onDragStart={setActivePlacedDragStickerId}
+                onDragEnd={() => setActivePlacedDragStickerId(null)}
               />
             );
           })}
+
+          {activeTrayDrag && activeDragSticker ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.dragGhost,
+                {
+                  width: placedStickerSize,
+                  height: placedStickerSize,
+                  left: activeTrayDrag.x - placedStickerSize / 2,
+                  top: activeTrayDrag.y - placedStickerSize / 2,
+                },
+              ]}
+            >
+              <StickerVisual
+                size={placedStickerSize}
+                name={activeDragSticker.name}
+                color={activeDragSticker.color}
+                imageSource={activeDragSticker.imageSource}
+                imageScale={activeDragSticker.fieldImageScale ?? activeDragSticker.imageScale}
+                imageOffsetY={activeDragSticker.imageOffsetY}
+              />
+            </View>
+          ) : null}
         </View>
 
         <View pointerEvents="box-none" style={styles.contentLayer}>
           {children}
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.modeButton,
-            { top: topInset, opacity: mode === 'creative' && !placedStickers.length ? 0.55 : 1 },
-          ]}
-          onPress={handleModeToggle}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.modeButtonText}>
-            {mode === 'creative' ? 'Clean Up' : 'Back to Play'}
-          </Text>
-        </TouchableOpacity>
-
         {showCelebration ? (
           <View pointerEvents="none" style={styles.celebrationOverlay}>
-            <Text style={styles.celebrationText}>Great cleanup!</Text>
+            <View style={styles.celebrationCard}>
+              <Image
+                source={require('../../../assets/enhanceduibuttons/greatjob.png')}
+                style={styles.celebrationImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.celebrationText}>Great job cleaning up!</Text>
           </View>
         ) : null}
       </View>
@@ -285,12 +293,15 @@ export default function WorldStickerBoard({
       <StickerTray
         stickers={stickers}
         trayHeight={trayHeight}
-        onStickerPress={handleTrayPress}
-        mode={mode}
-        remainingStickerIds={remainingStickerIds}
-        cleanupTargetSize={cleanupTargetSize}
         worldLabel={worldLabel}
         theme={trayTheme}
+        onTrayDragStart={handleTrayDragStart}
+        onTrayDragMove={handleTrayDragMove}
+        onTrayDragEnd={handleTrayDragEnd}
+        highlightDropZone={Boolean(activeTrayDrag) || Boolean(activePlacedDragStickerId)}
+        activeStickerId={activeTrayDrag?.stickerId ?? activePlacedDragStickerId ?? undefined}
+        trayAssetSource={trayAssetSource}
+        contentOffsetY={trayContentOffsetY}
       />
     </View>
   );
@@ -306,6 +317,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
+    bottom: 0,
   },
   backgroundBase: {
     ...StyleSheet.absoluteFillObject,
@@ -313,6 +325,9 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
+  },
+  backgroundImageAsset: {
+    transform: [{ translateY: -20 }],
   },
   contentLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -322,33 +337,42 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 2,
   },
-  modeButton: {
+  dragGhost: {
     position: 'absolute',
-    right: 20,
-    zIndex: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  modeButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2F3A45',
+    opacity: 0.95,
   },
   celebrationOverlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 5,
+    zIndex: 20,
+    elevation: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  celebrationCard: {
+    width: 500,
+    height: 220,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  celebrationImage: {
+    width: '92%',
+    height: '92%',
   },
   celebrationText: {
-    fontSize: 36,
+    marginTop: 12,
+    fontSize: 28,
     fontWeight: '800',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.25)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    color: '#14532D',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

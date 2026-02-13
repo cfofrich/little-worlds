@@ -6,72 +6,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MailComposer from 'expo-mail-composer';
 import { RootStackParamList } from '../../App';
 import WorldStickerBoard from '../components/stickers/WorldStickerBoard';
-import { StickerDefinition, StickerTrayTheme } from '../components/stickers/types';
+import { StickerTrayTheme } from '../components/stickers/types';
 import { useSound } from '../context/SoundContext';
 import SettingsModal from '../components/SettingsModal';
 
-type PlaygroundSceneProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Playground'>;
+type BlankWorldSceneProps = {
+  navigation: NativeStackNavigationProp<
+    RootStackParamList,
+    'Beach' | 'Construction' | 'Farm' | 'Space'
+  >;
+  worldLabel: string;
+  backgroundColor: string;
 };
 
-const PLAYGROUND_STICKERS: StickerDefinition[] = [
-  {
-    id: 'beach-ball',
-    name: 'Ball',
-    color: '#EF4444',
-    glowColor: '#F87171',
-    imageSource: require('../../assets/stickers/playground/beachball.png'),
-    imageScale: 1.45,
-  },
-  {
-    id: 'dump-truck',
-    name: 'Truck',
-    color: '#F59E0B',
-    glowColor: '#FBBF24',
-    imageSource: require('../../assets/stickers/playground/dumptrucktransparent.png'),
-    imageScale: 1.25,
-  },
-  {
-    id: 'slide',
-    name: 'Slide',
-    color: '#22C55E',
-    glowColor: '#4ADE80',
-    imageSource: require('../../assets/stickers/playground/slide.png'),
-    imageScale: 1.35,
-    fieldImageScale: 1.65,
-  },
-  {
-    id: 'tree',
-    name: 'Tree',
-    color: '#16A34A',
-    glowColor: '#4ADE80',
-    imageSource: require('../../assets/stickers/playground/tree.png'),
-    imageScale: 1.35,
-    fieldImageScale: 1.65,
-  },
-  {
-    id: 'toddler-boy',
-    name: 'Boy',
-    color: '#3B82F6',
-    glowColor: '#60A5FA',
-    imageSource: require('../../assets/stickers/playground/toddlerboy.png'),
-    imageScale: 1.25,
-    fieldImageScale: 2.55,
-    trayImageScale: 2.7,
-    imageOffsetY: 2,
-  },
-  {
-    id: 'toddler-girl',
-    name: 'Girl',
-    color: '#EC4899',
-    glowColor: '#F472B6',
-    imageSource: require('../../assets/stickers/playground/toddlergirl.png'),
-    imageScale: 1.25,
-    imageOffsetY: 0,
-  },
-];
-
-const PLAYGROUND_TRAY_THEME: StickerTrayTheme = {
+const TRAY_THEME: StickerTrayTheme = {
   trayBackground: 'rgba(255, 255, 255, 0.88)',
   traySurface: 'rgba(255, 255, 255, 0.92)',
   trayBorder: 'rgba(28, 105, 67, 0.3)',
@@ -80,7 +28,11 @@ const PLAYGROUND_TRAY_THEME: StickerTrayTheme = {
   cleanupSlotBackground: 'rgba(255, 255, 255, 0.88)',
 };
 
-export default function PlaygroundScene({ navigation }: PlaygroundSceneProps) {
+export default function BlankWorldScene({
+  navigation,
+  worldLabel,
+  backgroundColor,
+}: BlankWorldSceneProps) {
   const insets = useSafeAreaInsets();
   const homeButtonScale = useRef(new Animated.Value(1)).current;
   const { playPlop, soundEnabled, toggleSound } = useSound();
@@ -109,10 +61,6 @@ export default function PlaygroundScene({ navigation }: PlaygroundSceneProps) {
 
   const handleHomePress = () => {
     void playPlop();
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
     navigation.navigate('Home');
   };
 
@@ -133,13 +81,12 @@ export default function PlaygroundScene({ navigation }: PlaygroundSceneProps) {
   return (
     <View style={styles.screen}>
       <WorldStickerBoard
-        backgroundSource={require('../../assets/backgrounds/playground.png')}
+        backgroundColor={backgroundColor}
         trayAssetSource={require('../../assets/backgrounds/stickertray.png')}
         trayHeight={188}
-        trayContentOffsetY={-8}
-        stickers={PLAYGROUND_STICKERS}
-        worldLabel="Playground Stickers"
-        trayTheme={PLAYGROUND_TRAY_THEME}
+        stickers={[]}
+        worldLabel={worldLabel}
+        trayTheme={TRAY_THEME}
       />
       <View pointerEvents="box-none" style={styles.overlay}>
         <TouchableOpacity

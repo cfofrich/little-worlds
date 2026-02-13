@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, ImageSourcePropType, PanResponder, StyleSheet } from 'react-native';
 import StickerVisual from './StickerVisual';
 
@@ -27,6 +27,13 @@ type DraggablePlacedStickerProps = {
   }) => void;
   glowColor?: string;
   glowActive?: boolean;
+  glowIntensity?: number;
+  isRemoving?: boolean;
+  onRemoveAnimationComplete?: (instanceId: string) => void;
+  onInteraction?: () => void;
+  popOnMount?: boolean;
+  onDragStart?: (stickerId: string) => void;
+  onDragEnd?: () => void;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -48,8 +55,59 @@ export default function DraggablePlacedSticker({
   onRelease,
   glowColor,
   glowActive = false,
+  glowIntensity = 0.3,
+  isRemoving = false,
+  onRemoveAnimationComplete,
+  onInteraction,
+  popOnMount = false,
+  onDragStart,
+  onDragEnd,
 }: DraggablePlacedStickerProps) {
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const popAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!popOnMount) {
+      return;
+    }
+
+    popAnim.setValue(0.88);
+    Animated.sequence([
+      Animated.timing(popAnim, {
+        toValue: 1.08,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(popAnim, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [popAnim, popOnMount]);
+
+  useEffect(() => {
+    if (!isRemoving) {
+      return;
+    }
+
+    Animated.parallel([
+      Animated.timing(scaleAnim, {
+        toValue: 0.15,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onRemoveAnimationComplete?.(instanceId);
+    });
+  }, [instanceId, isRemoving, onRemoveAnimationComplete, opacityAnim, scaleAnim]);
 
   const panResponder = useMemo(
     () =>
@@ -57,6 +115,8 @@ export default function DraggablePlacedSticker({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
+          onDragStart?.(stickerId);
+          onInteraction?.();
           pan.stopAnimation((value) => {
             pan.setOffset({
               x: value.x,
@@ -86,6 +146,8 @@ export default function DraggablePlacedSticker({
                   x: clampedX,
                   y: clampedY,
                 });
+                onInteraction?.();
+                onDragEnd?.();
               });
               return;
             }
@@ -96,6 +158,8 @@ export default function DraggablePlacedSticker({
               x: clampedX,
               y: clampedY,
             });
+            onInteraction?.();
+            onDragEnd?.();
           });
         },
       }),
@@ -106,6 +170,9 @@ export default function DraggablePlacedSticker({
       bounds.minY,
       instanceId,
       onRelease,
+      onInteraction,
+      onDragEnd,
+      onDragStart,
       pan,
       stickerId,
     ]
@@ -119,10 +186,15 @@ export default function DraggablePlacedSticker({
         {
           width: size,
           height: size,
-          transform: [{ translateX: pan.x }, { translateY: pan.y }],
+          opacity: opacityAnim,
+          transform: [
+            { translateX: pan.x },
+            { translateY: pan.y },
+            { scale: Animated.multiply(scaleAnim, popAnim) },
+          ],
           shadowColor: glowActive ? glowColor ?? color : '#000',
           shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: glowActive ? 0.55 : 0.1,
+          shadowOpacity: glowActive ? glowIntensity : 0.1,
           shadowRadius: glowActive ? 10 : 2,
           elevation: glowActive ? 7 : 2,
         },
