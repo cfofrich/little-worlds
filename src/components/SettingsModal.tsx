@@ -30,6 +30,29 @@ const BUILD_SUMMARY_LINES = [
   '- Credits section for sound attributions.',
 ];
 
+const PRIVACY_POLICY_LINES = [
+  'Effective date: February 14, 2026',
+  '',
+  'Little Worlds is designed for local, private play.',
+  '',
+  'What we collect right now:',
+  '- No account or sign in.',
+  '- No analytics or tracking.',
+  '- No ads or third-party ad SDKs.',
+  '- No location, contacts, photos, camera, or microphone data collection.',
+  '',
+  'How the app works:',
+  '- Stickers, settings, and play interactions run on-device.',
+  '- Send Feedback opens your own mail app. If you email us, we only receive what you choose to send.',
+  '',
+  'Future updates:',
+  '- If diagnostics, analytics, or other logging are added in the future, this policy will be updated before release.',
+  '- Where required, new data collection features will be clearly disclosed and consented.',
+  '',
+  'Contact:',
+  '- littleworldsapp@proton.me',
+];
+
 export default function SettingsModal({
   visible,
   soundEnabled,
@@ -40,6 +63,7 @@ export default function SettingsModal({
 }: SettingsModalProps) {
   const [showCredits, setShowCredits] = useState(false);
   const [showBuildSummary, setShowBuildSummary] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
 
   const playButtonSound = () => {
     onButtonPress?.();
@@ -84,6 +108,29 @@ export default function SettingsModal({
             <TouchableOpacity style={styles.feedbackButton} onPress={handleFeedbackPress} activeOpacity={0.85}>
               <Text style={styles.feedbackButtonText}>Send Feedback</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sectionButton}
+              onPress={() => {
+                playButtonSound();
+                setShowPrivacyPolicy((prev) => !prev);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.sectionButtonText}>{showPrivacyPolicy ? 'Hide Privacy Policy' : 'Privacy Policy'}</Text>
+            </TouchableOpacity>
+
+            {showPrivacyPolicy ? (
+              <View style={styles.panel}>
+                <ScrollView style={styles.summaryScroll} nestedScrollEnabled>
+                  {PRIVACY_POLICY_LINES.map((line, index) => (
+                    <Text key={`${line}-${index}`} style={styles.panelText}>
+                      {line}
+                    </Text>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
 
             <TouchableOpacity
               style={styles.sectionButton}
