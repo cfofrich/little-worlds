@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, ImageSourcePropType, PanResponder, StyleSheet } from 'react-native';
+import {
+  Animated,
+  Easing,
+  GestureResponderEvent,
+  ImageSourcePropType,
+  PanResponder,
+  PanResponderGestureState,
+  StyleSheet,
+} from 'react-native';
 import StickerVisual from './StickerVisual';
 
 type DraggablePlacedStickerProps = {
@@ -12,6 +20,7 @@ type DraggablePlacedStickerProps = {
   imageOffsetY?: number;
   initialX: number;
   initialY: number;
+  initialScale?: number;
   size: number;
   bounds: {
     minX: number;
@@ -24,6 +33,8 @@ type DraggablePlacedStickerProps = {
     stickerId: string;
     x: number;
     y: number;
+    scale: number;
+    interaction: 'drag' | 'pinch';
   }) => void;
   glowColor?: string;
   glowActive?: boolean;
@@ -50,6 +61,7 @@ export default function DraggablePlacedSticker({
   imageOffsetY,
   initialX,
   initialY,
+  initialScale = 1,
   size,
   bounds,
   onRelease,
@@ -64,10 +76,70 @@ export default function DraggablePlacedSticker({
   onDragEnd,
 }: DraggablePlacedStickerProps) {
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
+  const stickerScale = useRef(new Animated.Value(initialScale)).current;
   const popScale = useRef(new Animated.Value(1)).current;
   const removeScale = useRef(new Animated.Value(1)).current;
   const removeOpacity = useRef(new Animated.Value(1)).current;
   const removeShiftY = useRef(new Animated.Value(0)).current;
+  const interactionModeRef = useRef<'none' | 'drag' | 'pinch'>('none');
+  const currentScaleRef = useRef(initialScale);
+  const pinchStartDistanceRef = useRef(0);
+  const pinchStartScaleRef = useRef(initialScale);
+
+  const clampScale = (value: number) => clamp(value, 0.5, 2);
+
+  const getDistanceBetweenTouches = (event: GestureResponderEvent) => {
+    const touches = event.nativeEvent.touches;
+    if (!touches || touches.length < 2) {
+      return 0;
+    }
+
+    const first = touches[0];
+    const second = touches[1];
+    const dx = second.pageX - first.pageX;
+    const dy = second.pageY - first.pageY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const updateDragPosition = (gestureState: PanResponderGestureState) => {
+    pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+  };
+
+  const beginDrag = () => {
+    interactionModeRef.current = 'drag';
+    onDragStart?.(stickerId);
+    onInteraction?.();
+    pan.stopAnimation((value) => {
+      pan.setOffset({
+        x: value.x,
+        y: value.y,
+      });
+      pan.setValue({ x: 0, y: 0 });
+    });
+  };
+
+  const beginPinch = (event: GestureResponderEvent) => {
+    if (interactionModeRef.current === 'drag') {
+      pan.flattenOffset();
+    }
+
+    interactionModeRef.current = 'pinch';
+    onInteraction?.();
+    pinchStartDistanceRef.current = getDistanceBetweenTouches(event);
+    pinchStartScaleRef.current = currentScaleRef.current;
+  };
+
+  const updatePinchScale = (event: GestureResponderEvent) => {
+    const distance = getDistanceBetweenTouches(event);
+    const startDistance = pinchStartDistanceRef.current;
+    if (!distance || !startDistance) {
+      return;
+    }
+
+    const nextScale = clampScale(pinchStartScaleRef.current * (distance / startDistance));
+    currentScaleRef.current = nextScale;
+    stickerScale.setValue(nextScale);
+  };
 
   useEffect(() => {
     if (!popOnMount) {
@@ -130,22 +202,43 @@ export default function DraggablePlacedSticker({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
-          onDragStart?.(stickerId);
-          onInteraction?.();
-          pan.stopAnimation((value) => {
-            pan.setOffset({
-              x: value.x,
-              y: value.y,
-            });
-            pan.setValue({ x: 0, y: 0 });
-          });
+        onPanResponderGrant: (event) => {
+          if (event.nativeEvent.touches.length >= 2) {
+            beginPinch(event);
+            return;
+          }
+
+          beginDrag();
         },
-        onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-          useNativeDriver: false,
-        }),
+        onPanResponderMove: (event, gestureState) => {
+          const touches = event.nativeEvent.touches.length;
+
+          if (touches >= 2) {
+            if (interactionModeRef.current !== 'pinch') {
+              beginPinch(event);
+            }
+            updatePinchScale(event);
+            return;
+          }
+
+          if (interactionModeRef.current === 'pinch') {
+            return;
+          }
+
+          if (interactionModeRef.current !== 'drag') {
+            beginDrag();
+          }
+
+          updateDragPosition(gestureState);
+        },
         onPanResponderRelease: () => {
-          pan.flattenOffset();
+          const interaction = interactionModeRef.current;
+          interactionModeRef.current = 'none';
+
+          if (interaction === 'drag') {
+            pan.flattenOffset();
+          }
+
           pan.stopAnimation((value) => {
             const clampedX = clamp(value.x, bounds.minX, bounds.maxX);
             const clampedY = clamp(value.y, bounds.minY, bounds.maxY);
@@ -157,13 +250,18 @@ export default function DraggablePlacedSticker({
               stickerId,
               x: clampedX,
               y: clampedY,
+              scale: currentScaleRef.current,
+              interaction: interaction === 'pinch' ? 'pinch' : 'drag',
             });
             onInteraction?.();
             onDragEnd?.();
           });
         },
         onPanResponderTerminate: () => {
-          pan.flattenOffset();
+          if (interactionModeRef.current === 'drag') {
+            pan.flattenOffset();
+          }
+          interactionModeRef.current = 'none';
           onDragEnd?.();
         },
       }),
@@ -178,6 +276,7 @@ export default function DraggablePlacedSticker({
       onDragEnd,
       onDragStart,
       pan,
+      stickerScale,
       stickerId,
     ]
   );
@@ -195,7 +294,7 @@ export default function DraggablePlacedSticker({
             { translateX: pan.x },
             { translateY: pan.y },
             { translateY: removeShiftY },
-            { scale: Animated.multiply(popScale, removeScale) },
+            { scale: Animated.multiply(Animated.multiply(popScale, removeScale), stickerScale) },
           ],
         },
       ]}

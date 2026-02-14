@@ -137,6 +137,7 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
         stickerId,
         x: clamp(x - placedStickerSize / 2, 0, Math.max(0, layout.width - placedStickerSize)),
         y: clamp(y - placedStickerSize / 2, 0, Math.max(0, layout.height - placedStickerSize)),
+        scale: 1,
       };
 
       setPlacedStickers((current) => [...current, newSticker]);
@@ -144,15 +145,36 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
     };
 
     const handleStickerRelease = ({
+      interaction,
+      scale,
       x,
       instanceId,
       y,
     }: {
+      interaction: 'drag' | 'pinch';
       instanceId: string;
       stickerId: string;
       x: number;
       y: number;
+      scale: number;
     }) => {
+      setPlacedStickers((current) =>
+        current.map((item) =>
+          item.instanceId === instanceId
+            ? {
+                ...item,
+                x,
+                y,
+                scale,
+              }
+            : item
+        )
+      );
+
+      if (interaction !== 'drag') {
+        return;
+      }
+
       const stickerCenterX = x + placedStickerSize / 2;
       const stickerCenterY = y + placedStickerSize / 2;
 
@@ -229,6 +251,7 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
                   imageOffsetY={sticker.imageOffsetY}
                   initialX={placed.x}
                   initialY={placed.y}
+                  initialScale={placed.scale ?? 1}
                   size={placedStickerSize}
                   bounds={dragBounds}
                   onRelease={handleStickerRelease}

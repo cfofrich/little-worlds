@@ -24,4 +24,5 @@ export type PlacedSticker = {
   stickerId: string;
   x: number;
   y: number;
+  scale?: number;
 };
