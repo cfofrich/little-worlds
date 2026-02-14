@@ -4,6 +4,7 @@ import { InteractionManager } from 'react-native';
 type SoundContextType = {
   soundEnabled: boolean;
   toggleSound: () => void;
+  preloadSounds: () => Promise<void>;
   playIfEnabled: (playFn: () => void | Promise<void>) => Promise<void>;
   playPlop: () => Promise<void>;
   playCleanup: () => Promise<void>;
@@ -12,6 +13,7 @@ type SoundContextType = {
 const SoundContext = createContext<SoundContextType>({
   soundEnabled: true,
   toggleSound: () => {},
+  preloadSounds: async () => {},
   playIfEnabled: async () => {},
   playPlop: async () => {},
   playCleanup: async () => {},
@@ -180,6 +182,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
       value={{
         soundEnabled,
         toggleSound,
+        preloadSounds: ensureSoundsLoaded,
         playIfEnabled,
         playPlop,
         playCleanup,
