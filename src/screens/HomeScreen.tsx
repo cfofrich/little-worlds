@@ -3,6 +3,7 @@ import {
   Animated,
   Easing,
   Image,
+  ImageSourcePropType,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -17,7 +18,7 @@ import SceneCarousel from '../components/SceneCarousel';
 import SettingsModal from '../components/SettingsModal';
 import { useHomeLayoutMetrics, SPACING } from '../hooks/useHomeLayoutMetrics';
 import { useSound } from '../context/SoundContext';
-import { HOME_SCENES } from '../data/worlds';
+import { getWorldConfig, HOME_SCENES, WorldId } from '../data/worlds';
 
 const WORLD_HOME_BUTTON_SOURCE = require('../../assets/enhanceduibuttons/homebutton.png');
 const WORLD_CLEANUP_BUTTON_SOURCE = require('../../assets/enhanceduibuttons/cleanup.png');
@@ -42,9 +43,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     titleTop,
   } = useHomeLayoutMetrics(screenWidth, screenHeight);
 
-  const { soundEnabled, toggleSound, playPlop } = useSound();
+  const { soundEnabled, toggleSound } = useSound();
 
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [isNavigatingToWorld, setIsNavigatingToWorld] = useState(false);
+  const [isTransitionVisible, setIsTransitionVisible] = useState(false);
   const [centeredIndex, setCenteredIndex] = useState(0);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [layerAIndex, setLayerAIndex] = useState(0);
@@ -57,6 +60,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const transitionTargetIndexRef = useRef(0);
   const transitionIdRef = useRef(0);
   const logoPulse = useRef(new Animated.Value(1)).current;
+  const transitionWashOpacity = useRef(new Animated.Value(0)).current;
+  const hasFocusedOnceRef = useRef(false);
 
   const scenes = useMemo(() => HOME_SCENES, []);
 
@@ -81,6 +86,59 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
     void Promise.all(prefetchTasks).catch(() => {});
   }, [scenes]);
+
+  const preloadSource = useCallback(async (source?: ImageSourcePropType) => {
+    if (!source) {
+      return;
+    }
+
+    const resolved = Image.resolveAssetSource(source);
+    if (!resolved?.uri) {
+      return;
+    }
+
+    await Image.prefetch(resolved.uri).catch(() => {});
+  }, []);
+
+  const preloadWorldAssets = useCallback(async (worldId: WorldId) => {
+    const world = getWorldConfig(worldId);
+    const sources: Array<ImageSourcePropType | undefined> = [
+      world.worldBackgroundSource,
+      WORLD_HOME_BUTTON_SOURCE,
+      WORLD_CLEANUP_BUTTON_SOURCE,
+      WORLD_TRAY_SOURCE,
+      ...world.stickers.map((sticker) => sticker.imageSource),
+    ];
+
+    await Promise.all(sources.map((source) => preloadSource(source)));
+  }, [preloadSource]);
+
+  useEffect(() => {
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      if (!hasFocusedOnceRef.current) {
+        hasFocusedOnceRef.current = true;
+        transitionWashOpacity.setValue(0);
+        return;
+      }
+
+      setIsTransitionVisible(true);
+      transitionWashOpacity.stopAnimation();
+      transitionWashOpacity.setValue(1);
+      Animated.timing(transitionWashOpacity, {
+        toValue: 0,
+        duration: 440,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) {
+          return;
+        }
+        setIsTransitionVisible(false);
+      });
+    });
+
+    return unsubscribeFocus;
+  }, [navigation, transitionWashOpacity]);
 
   const startBackgroundTransition = useCallback((nextIndex: number) => {
     if (
@@ -157,13 +215,41 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     });
   };
 
-  const handleCardPress = (_index: number, routeName: keyof RootStackParamList) => {
+  const handleCardPress = async (_index: number, routeName: keyof RootStackParamList) => {
     if (routeName === 'Home') {
       return;
     }
+    if (isNavigatingToWorld) {
+      return;
+    }
 
-    navigation.navigate(routeName);
-    void playPlop();
+    const scene = scenes.find((item) => item.routeName === routeName);
+    if (!scene) {
+      return;
+    }
+
+    setIsNavigatingToWorld(true);
+    await preloadWorldAssets(scene.id as WorldId);
+
+    setIsTransitionVisible(true);
+    transitionWashOpacity.stopAnimation();
+    transitionWashOpacity.setValue(0);
+
+    Animated.timing(transitionWashOpacity, {
+      toValue: 1,
+      duration: 440,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) {
+        setIsNavigatingToWorld(false);
+        setIsTransitionVisible(false);
+        return;
+      }
+
+      navigation.navigate(routeName);
+      setIsNavigatingToWorld(false);
+    });
   };
 
   const handleLogoPress = () => {
@@ -185,8 +271,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         useNativeDriver: true,
       }),
     ]).start();
-
-    void playPlop();
   };
 
   const backgroundFallbackSource = Array.isArray(scenes[activeBackgroundIndex].homeBackgroundSource)
@@ -213,12 +297,31 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           resizeMode="cover"
         />
       </Animated.View>
+      <View pointerEvents="none" style={styles.backgroundPreloadStrip}>
+        {scenes.map((scene) => (
+          <Image
+            key={`bg-preload-${scene.id}`}
+            source={scene.homeBackgroundSource}
+            style={styles.backgroundPreloadImage}
+            resizeMode="cover"
+            fadeDuration={0}
+          />
+        ))}
+      </View>
+      <Animated.View
+        pointerEvents={isTransitionVisible ? 'auto' : 'none'}
+        style={[
+          styles.transitionWash,
+          {
+            opacity: transitionWashOpacity,
+          },
+        ]}
+      />
 
       <View style={styles.contentLayer}>
         <TouchableOpacity
           style={[styles.header, { top: insets.top + 8 }]}
           onPress={() => {
-            void playPlop();
             setSettingsVisible(true);
           }}
           activeOpacity={0.8}
@@ -267,9 +370,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           onToggleSound={toggleSound}
           onClose={() => setSettingsVisible(false)}
           onFeedbackPress={handleFeedback}
-          onButtonPress={() => {
-            void playPlop();
-          }}
         />
       </View>
     </View>
@@ -287,8 +387,26 @@ const styles = StyleSheet.create({
   backgroundOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
+  backgroundPreloadStrip: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+    overflow: 'hidden',
+  },
+  backgroundPreloadImage: {
+    width: 1,
+    height: 1,
+  },
+  transitionWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    zIndex: 50,
+    elevation: 50,
+  },
   contentLayer: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
   },
   header: {
     position: 'absolute',

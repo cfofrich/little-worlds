@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MailComposer from 'expo-mail-composer';
@@ -33,20 +33,36 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   const insets = useSafeAreaInsets();
   const boardRef = useRef<WorldStickerBoardHandle>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [isLeavingHome, setIsLeavingHome] = useState(false);
+  const [isTransitionVisible, setIsTransitionVisible] = useState(true);
   const { soundEnabled, toggleSound, playCleanup } = useSound();
-  const leavingHomeRef = useRef(false);
-  const leaveFade = useRef(new Animated.Value(0)).current;
+  const transitionWashOpacity = useRef(new Animated.Value(1)).current;
+  const homePulseScale = useRef(new Animated.Value(1)).current;
+  const cleanupPulseScale = useRef(new Animated.Value(1)).current;
 
   const topOffset = insets.top + 20;
 
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => {
-      leavingHomeRef.current = false;
-      leaveFade.setValue(0);
+      setIsLeavingHome(false);
+      setIsTransitionVisible(true);
+      transitionWashOpacity.stopAnimation();
+      transitionWashOpacity.setValue(1);
+      Animated.timing(transitionWashOpacity, {
+        toValue: 0,
+        duration: 440,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) {
+          return;
+        }
+        setIsTransitionVisible(false);
+      });
     });
 
     return unsubscribeFocus;
-  }, [leaveFade, navigation]);
+  }, [navigation, transitionWashOpacity]);
 
   useEffect(() => {
     const sources = [
@@ -78,16 +94,42 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
     });
   };
 
+  const playButtonPulse = useCallback((scale: Animated.Value) => {
+    scale.stopAnimation();
+    scale.setValue(1);
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 0.92,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1.1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   const handleHomePress = () => {
-    if (leavingHomeRef.current) {
+    if (isLeavingHome) {
       return;
     }
 
-    leavingHomeRef.current = true;
-    leaveFade.setValue(0);
-    Animated.timing(leaveFade, {
+    playButtonPulse(homePulseScale);
+    setIsLeavingHome(true);
+    setIsTransitionVisible(true);
+    transitionWashOpacity.stopAnimation();
+    transitionWashOpacity.setValue(0);
+    Animated.timing(transitionWashOpacity, {
       toValue: 1,
-      duration: 140,
+      duration: 440,
+      easing: Easing.inOut(Easing.quad),
       useNativeDriver: true,
     }).start(() => {
       navigation.popToTop();
@@ -95,6 +137,7 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   };
 
   const handleCleanupPress = () => {
+    playButtonPulse(cleanupPulseScale);
     boardRef.current?.cleanupAll();
     void playCleanup();
   };
@@ -121,34 +164,40 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
           <TouchableOpacity
             style={styles.homeButton}
             activeOpacity={0.85}
-            disabled={leavingHomeRef.current}
+            disabled={isLeavingHome}
             onPress={handleHomePress}
           >
-            <Image
-              source={HOME_BUTTON_SOURCE}
-              defaultSource={HOME_BUTTON_SOURCE}
-              style={styles.homeButtonImage}
-              resizeMode="contain"
-            />
+            <Animated.View style={[styles.buttonPulseWrap, { transform: [{ scale: homePulseScale }] }]}>
+              <Image
+                source={HOME_BUTTON_SOURCE}
+                defaultSource={HOME_BUTTON_SOURCE}
+                style={styles.homeButtonImage}
+                resizeMode="contain"
+              />
+            </Animated.View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.cleanupButton}
             activeOpacity={0.85}
-            disabled={leavingHomeRef.current}
+            disabled={isLeavingHome}
             onPress={handleCleanupPress}
           >
-            <Image
-              source={CLEANUP_BUTTON_SOURCE}
-              defaultSource={CLEANUP_BUTTON_SOURCE}
-              style={styles.cleanupButtonImage}
-              resizeMode="contain"
-            />
+            <Animated.View
+              style={[styles.buttonPulseWrap, { transform: [{ scale: cleanupPulseScale }] }]}
+            >
+              <Image
+                source={CLEANUP_BUTTON_SOURCE}
+                defaultSource={CLEANUP_BUTTON_SOURCE}
+                style={styles.cleanupButtonImage}
+                resizeMode="contain"
+              />
+            </Animated.View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.settingsButton}
-            disabled={leavingHomeRef.current}
+            disabled={isLeavingHome}
             onPress={handleSettingsOpen}
             activeOpacity={0.85}
           >
@@ -166,6 +215,10 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
         onClose={() => setSettingsVisible(false)}
         onFeedbackPress={handleFeedback}
       />
+      <Animated.View
+        pointerEvents={isTransitionVisible ? 'auto' : 'none'}
+        style={[styles.transitionWash, { opacity: transitionWashOpacity }]}
+      />
       <View pointerEvents="none" style={styles.stickerPreloadStrip}>
         {world.stickers.map((sticker) => (
           <Image
@@ -177,7 +230,6 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
           />
         ))}
       </View>
-      <Animated.View pointerEvents="none" style={[styles.leaveOverlay, { opacity: leaveFade }]} />
     </View>
   );
 }
@@ -236,6 +288,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  buttonPulseWrap: {
+    width: '100%',
+    height: '100%',
+  },
   settingsIcon: {
     width: 37,
     height: 37,
@@ -255,12 +311,6 @@ const styles = StyleSheet.create({
     fontSize: 19,
     marginTop: -2,
   },
-  leaveOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#F2FBFF',
-    zIndex: 999,
-    elevation: 999,
-  },
   stickerPreloadStrip: {
     position: 'absolute',
     width: 1,
@@ -271,5 +321,11 @@ const styles = StyleSheet.create({
   stickerPreloadImage: {
     width: 1,
     height: 1,
+  },
+  transitionWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    zIndex: 999,
+    elevation: 999,
   },
 });
