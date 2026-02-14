@@ -1,4 +1,5 @@
 import {
+  Animated,
   ImageBackground,
   ImageSourcePropType,
   LayoutChangeEvent,
@@ -14,6 +15,7 @@ import {
 } from 'react';
 import DraggablePlacedSticker from './DraggablePlacedSticker';
 import StickerTray from './StickerTray';
+import StickerVisual from './StickerVisual';
 import { PlacedSticker, StickerDefinition, StickerTrayTheme } from './types';
 import { useSound } from '../../context/SoundContext';
 
@@ -74,8 +76,10 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
     const { playPlop, playCleanup } = useSound();
     const [layout, setLayout] = useState({ width: 0, height: 0 });
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
+    const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
     const [activeTrayDrag, setActiveTrayDrag] = useState<ActiveTrayDrag | null>(null);
-
+    const trayDragX = useState(() => new Animated.Value(0))[0];
+    const trayDragY = useState(() => new Animated.Value(0))[0];
     const stickerMap = useMemo(() => {
       return stickers.reduce<Record<string, StickerDefinition>>((acc, item) => {
         acc[item.id] = item;
@@ -94,16 +98,28 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
       if (!placedStickers.length) {
         return;
       }
-      setPlacedStickers([]);
+
+      setRemovingIds((current) => {
+        const next = new Set(current);
+        placedStickers.forEach((placed) => {
+          next.add(placed.instanceId);
+        });
+        return next;
+      });
     };
 
     useImperativeHandle(ref, () => ({ cleanupAll }), [placedStickers]);
 
-    const handleTrayDragStart = (stickerId: string) => {
+    const handleTrayDragStart = (stickerId: string, x: number, y: number) => {
+      trayDragX.setValue(x);
+      trayDragY.setValue(y);
       setActiveTrayDrag({ stickerId });
     };
 
-    const handleTrayDragMove = (_stickerId: string, _x: number, _y: number) => {};
+    const handleTrayDragMove = (_stickerId: string, x: number, y: number) => {
+      trayDragX.setValue(x);
+      trayDragY.setValue(y);
+    };
 
     const handleTrayDragEnd = (stickerId: string, x: number, y: number) => {
       setActiveTrayDrag(null);
@@ -151,8 +167,27 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
         return;
       }
 
-      setPlacedStickers((current) => current.filter((item) => item.instanceId !== instanceId));
+      setRemovingIds((current) => {
+        if (current.has(instanceId)) {
+          return current;
+        }
+        const next = new Set(current);
+        next.add(instanceId);
+        return next;
+      });
       void playCleanup();
+    };
+
+    const handleRemoveAnimationComplete = (instanceId: string) => {
+      setPlacedStickers((current) => current.filter((item) => item.instanceId !== instanceId));
+      setRemovingIds((current) => {
+        if (!current.has(instanceId)) {
+          return current;
+        }
+        const next = new Set(current);
+        next.delete(instanceId);
+        return next;
+      });
     };
 
     const dragBounds = {
@@ -199,11 +234,39 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
                   onRelease={handleStickerRelease}
                   glowColor={sticker.glowColor ?? sticker.color}
                   glowActive={false}
-                  popOnMount={false}
+                  popOnMount
+                  isRemoving={removingIds.has(placed.instanceId)}
+                  onRemoveAnimationComplete={handleRemoveAnimationComplete}
                 />
               );
             })}
 
+            {activeTrayDrag ? (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.trayDragGhost,
+                  {
+                    width: placedStickerSize,
+                    height: placedStickerSize,
+                    marginLeft: -placedStickerSize / 2,
+                    marginTop: -placedStickerSize / 2,
+                    transform: [{ translateX: trayDragX }, { translateY: trayDragY }],
+                  },
+                ]}
+              >
+                {stickerMap[activeTrayDrag.stickerId] ? (
+                  <StickerVisual
+                    size={placedStickerSize}
+                    name={stickerMap[activeTrayDrag.stickerId].name}
+                    color={stickerMap[activeTrayDrag.stickerId].color}
+                    imageSource={stickerMap[activeTrayDrag.stickerId].imageSource}
+                    imageScale={stickerMap[activeTrayDrag.stickerId].imageScale}
+                    imageOffsetY={stickerMap[activeTrayDrag.stickerId].imageOffsetY}
+                  />
+                ) : null}
+              </Animated.View>
+            ) : null}
           </View>
 
           <View pointerEvents="box-none" style={styles.contentLayer}>
@@ -264,5 +327,9 @@ const styles = StyleSheet.create({
   playLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 2,
+  },
+  trayDragGhost: {
+    position: 'absolute',
+    zIndex: 8,
   },
 });

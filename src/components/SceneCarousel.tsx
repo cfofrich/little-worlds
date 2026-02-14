@@ -24,6 +24,7 @@ type SceneCarouselProps = {
   scenes: SceneItem[];
   centeredIndex: number;
   onCenteredIndexChange: (index: number) => void;
+  onPreviewIndexChange?: (index: number) => void;
   onCardPress: (index: number, sceneId: string) => void;
   cardWidth: number;
   cardHeight: number;
@@ -38,6 +39,7 @@ export default function SceneCarousel({
   scenes,
   centeredIndex,
   onCenteredIndexChange,
+  onPreviewIndexChange,
   onCardPress,
   cardWidth,
   cardHeight,
@@ -47,9 +49,11 @@ export default function SceneCarousel({
   titleImageWidth = 220,
   titleImageHeight = 66,
 }: SceneCarouselProps) {
+  const flatListRef = useRef<Animated.FlatList<SceneItem> | null>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const lastReportedIndexRef = useRef(centeredIndex);
+  const lastPreviewIndexRef = useRef(centeredIndex);
 
   useEffect(() => {
     pulseAnim.setValue(0);
@@ -69,6 +73,7 @@ export default function SceneCarousel({
 
   useEffect(() => {
     lastReportedIndexRef.current = centeredIndex;
+    lastPreviewIndexRef.current = centeredIndex;
   }, [centeredIndex]);
 
   const reportCenteredIndexFromOffset = (offsetX: number) => {
@@ -83,12 +88,72 @@ export default function SceneCarousel({
     onCenteredIndexChange(nextIndex);
   };
 
+  const getNearestIndexFromOffset = (offsetX: number) => {
+    const maxIndex = Math.max(0, scenes.length - 1);
+    return Math.max(0, Math.min(maxIndex, Math.round(offsetX / snapInterval)));
+  };
+
+  const scrollToOffsetSafe = (offset: number, animated: boolean) => {
+    const list = flatListRef.current as
+      | (Animated.FlatList<SceneItem> & { scrollToOffset?: (params: { offset: number; animated: boolean }) => void; getNode?: () => { scrollToOffset: (params: { offset: number; animated: boolean }) => void } })
+      | null;
+
+    if (!list) {
+      return;
+    }
+
+    if (typeof list.scrollToOffset === 'function') {
+      list.scrollToOffset({ offset, animated });
+      return;
+    }
+
+    if (typeof list.getNode === 'function') {
+      list.getNode().scrollToOffset({ offset, animated });
+    }
+  };
+
+  const snapToNearestOffset = (offsetX: number, animated: boolean) => {
+    const nearestIndex = getNearestIndexFromOffset(offsetX);
+    const snappedOffset = nearestIndex * snapInterval;
+
+    reportPreviewIndexFromOffset(snappedOffset);
+    reportCenteredIndexFromOffset(snappedOffset);
+
+    if (Math.abs(offsetX - snappedOffset) > 0.5) {
+      scrollToOffsetSafe(snappedOffset, animated);
+    }
+  };
+
   const handleMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    reportCenteredIndexFromOffset(event.nativeEvent.contentOffset.x);
+    snapToNearestOffset(event.nativeEvent.contentOffset.x, false);
+  };
+
+  const reportPreviewIndexFromOffset = (offsetX: number) => {
+    if (!onPreviewIndexChange) {
+      return;
+    }
+
+    const maxIndex = Math.max(0, scenes.length - 1);
+    const nextIndex = Math.max(0, Math.min(maxIndex, Math.round(offsetX / snapInterval)));
+
+    if (nextIndex === lastPreviewIndexRef.current) {
+      return;
+    }
+
+    lastPreviewIndexRef.current = nextIndex;
+    onPreviewIndexChange(nextIndex);
+  };
+
+  const handleScrollBeginDrag = () => {
+    pulseAnim.stopAnimation();
+    pulseAnim.setValue(0);
   };
 
   const handleScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    reportCenteredIndexFromOffset(event.nativeEvent.contentOffset.x);
+    const velocityX = Math.abs(event.nativeEvent.velocity?.x ?? 0);
+    if (velocityX < 0.15) {
+      snapToNearestOffset(event.nativeEvent.contentOffset.x, true);
+    }
   };
 
   const renderCard = ({ item, index }: { item: SceneItem; index: number }) => {
@@ -153,6 +218,7 @@ export default function SceneCarousel({
 
   return (
     <Animated.FlatList
+      ref={flatListRef}
       data={scenes}
       renderItem={renderCard}
       keyExtractor={(item) => item.id}
@@ -162,10 +228,18 @@ export default function SceneCarousel({
       style={styles.list}
       removeClippedSubviews={false}
       snapToInterval={snapInterval}
+      snapToAlignment="start"
+      disableIntervalMomentum
       decelerationRate="fast"
+      bounces={false}
+      alwaysBounceHorizontal={false}
       onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
         useNativeDriver: true,
+        listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+          reportPreviewIndexFromOffset(event.nativeEvent.contentOffset.x);
+        },
       })}
+      onScrollBeginDrag={handleScrollBeginDrag}
       onScrollEndDrag={handleScrollEndDrag}
       onMomentumScrollEnd={handleMomentumScrollEnd}
       scrollEventThrottle={16}

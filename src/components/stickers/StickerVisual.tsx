@@ -18,10 +18,14 @@ export default function StickerVisual({
   imageOffsetY = 0,
 }: StickerVisualProps) {
   if (imageSource) {
+    const defaultImageSource = Array.isArray(imageSource) ? imageSource[0] : imageSource;
+
     return (
       <View style={[styles.imageShell, { width: size, height: size }]}>
         <Image
           source={imageSource}
+          defaultSource={defaultImageSource}
+          fadeDuration={0}
           style={[
             styles.image,
             {

@@ -37,6 +37,67 @@ type TrayItemProps = {
   isActiveSticker: boolean;
 };
 
+function truncateLabel(value: string, maxChars: number) {
+  if (value.length <= maxChars) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxChars - 1)).trim()}…`;
+}
+
+function formatStickerLabel(rawLabel: string): string {
+  const normalized = rawLabel
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  const maxSingleLineChars = 12;
+  const maxFirstLineChars = 12;
+  const maxSecondLineChars = 13;
+
+  if (normalized.length <= maxSingleLineChars) {
+    return normalized;
+  }
+
+  const words = normalized.split(' ');
+  if (words.length === 1) {
+    return truncateLabel(normalized, maxSingleLineChars);
+  }
+
+  let bestBreakIndex = 1;
+  let bestBalance = Number.POSITIVE_INFINITY;
+
+  for (let i = 1; i < words.length; i += 1) {
+    const left = words.slice(0, i).join(' ');
+    const right = words.slice(i).join(' ');
+    const leftLen = left.length;
+    const rightLen = right.length;
+    const penalty =
+      Math.abs(leftLen - rightLen) +
+      Math.max(0, leftLen - maxFirstLineChars) * 3 +
+      Math.max(0, rightLen - maxSecondLineChars) * 3;
+
+    if (penalty < bestBalance) {
+      bestBalance = penalty;
+      bestBreakIndex = i;
+    }
+  }
+
+  const lineOne = truncateLabel(words.slice(0, bestBreakIndex).join(' '), maxFirstLineChars);
+  const lineTwo = truncateLabel(words.slice(bestBreakIndex).join(' '), maxSecondLineChars);
+
+  if (!lineTwo) {
+    return lineOne;
+  }
+
+  return `${lineOne}\n${lineTwo}`;
+}
+
 function TrayItem({
   sticker,
   onDragStart,
@@ -47,6 +108,7 @@ function TrayItem({
   isActiveSticker: _isActiveSticker,
 }: TrayItemProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const label = formatStickerLabel(sticker.name);
 
   const panResponder = useMemo(
     () =>
@@ -87,9 +149,16 @@ function TrayItem({
           imageOffsetY={sticker.imageOffsetY}
         />
       </View>
-      <Text numberOfLines={1} style={[styles.stickerLabel, { color: labelColor }]}> 
-        {sticker.name}
-      </Text>
+      <View style={styles.labelWrap}>
+        <Text
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          style={[styles.stickerLabel, { color: labelColor }]}
+        >
+          {label}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -191,11 +260,11 @@ const styles = StyleSheet.create({
     minWidth: '100%',
   },
   trayButton: {
-    marginHorizontal: 6,
+    marginHorizontal: 5,
     alignItems: 'center',
-    width: 72,
-    minHeight: 84,
-    justifyContent: 'center',
+    width: 84,
+    minHeight: 104,
+    justifyContent: 'flex-start',
   },
   trayButtonDragging: {
     opacity: 0.35,
@@ -204,15 +273,23 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 2,
   },
+  labelWrap: {
+    marginTop: 3,
+    minHeight: 30,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
   stickerLabel: {
-    marginTop: 2,
     fontSize: 11,
-    lineHeight: 12,
+    lineHeight: 13,
     fontWeight: '800',
     textAlign: 'center',
+    textAlignVertical: 'top',
     textShadowColor: 'rgba(255, 255, 255, 0.45)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
     width: '100%',
+    paddingHorizontal: 2,
   },
 });

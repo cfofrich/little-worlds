@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as MailComposer from 'expo-mail-composer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
@@ -18,6 +18,10 @@ import SettingsModal from '../components/SettingsModal';
 import { useHomeLayoutMetrics, SPACING } from '../hooks/useHomeLayoutMetrics';
 import { useSound } from '../context/SoundContext';
 import { HOME_SCENES } from '../data/worlds';
+
+const WORLD_HOME_BUTTON_SOURCE = require('../../assets/enhanceduibuttons/homebutton.png');
+const WORLD_CLEANUP_BUTTON_SOURCE = require('../../assets/enhanceduibuttons/cleanup.png');
+const WORLD_TRAY_SOURCE = require('../../assets/backgrounds/stickertray.png');
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -42,24 +46,33 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [centeredIndex, setCenteredIndex] = useState(0);
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const [layerAIndex, setLayerAIndex] = useState(0);
   const [layerBIndex, setLayerBIndex] = useState(0);
+  const [activeBackgroundIndex, setActiveBackgroundIndex] = useState(0);
   const layerAOpacity = useRef(new Animated.Value(1)).current;
   const layerBOpacity = useRef(new Animated.Value(0)).current;
   const activeLayerRef = useRef<'A' | 'B'>('A');
   const activeBackgroundIndexRef = useRef(0);
+  const transitionTargetIndexRef = useRef(0);
   const transitionIdRef = useRef(0);
   const logoPulse = useRef(new Animated.Value(1)).current;
 
   const scenes = useMemo(() => HOME_SCENES, []);
 
   useEffect(() => {
-    const prefetchTasks = scenes.flatMap((scene) => {
-      const assets = [scene.homeBackgroundSource, scene.imageSource];
-      return assets
-        .map((assetSource) => Image.resolveAssetSource(assetSource))
-        .filter((resolved) => resolved?.uri)
-        .map((resolved) => Image.prefetch(resolved.uri));
+    const prefetchTasks = scenes
+      .flatMap((scene) => [scene.homeBackgroundSource, scene.imageSource])
+      .map((assetSource) => Image.resolveAssetSource(assetSource))
+      .filter((resolved) => resolved?.uri)
+      .map((resolved) => Image.prefetch(resolved.uri));
+
+    const uiAssets = [WORLD_HOME_BUTTON_SOURCE, WORLD_CLEANUP_BUTTON_SOURCE, WORLD_TRAY_SOURCE];
+    uiAssets.forEach((assetSource) => {
+      const resolved = Image.resolveAssetSource(assetSource);
+      if (resolved?.uri) {
+        prefetchTasks.push(Image.prefetch(resolved.uri));
+      }
     });
 
     if (!prefetchTasks.length) {
@@ -69,11 +82,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     void Promise.all(prefetchTasks).catch(() => {});
   }, [scenes]);
 
-  useEffect(() => {
-    if (centeredIndex === activeBackgroundIndexRef.current) {
+  const startBackgroundTransition = useCallback((nextIndex: number) => {
+    if (
+      nextIndex === activeBackgroundIndexRef.current ||
+      nextIndex === transitionTargetIndexRef.current
+    ) {
       return;
     }
 
+    transitionTargetIndexRef.current = nextIndex;
     transitionIdRef.current += 1;
     const transitionId = transitionIdRef.current;
     const incomingLayer = activeLayerRef.current === 'A' ? 'B' : 'A';
@@ -81,9 +98,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     const outgoingOpacity = incomingLayer === 'A' ? layerBOpacity : layerAOpacity;
 
     if (incomingLayer === 'A') {
-      setLayerAIndex(centeredIndex);
+      setLayerAIndex(nextIndex);
     } else {
-      setLayerBIndex(centeredIndex);
+      setLayerBIndex(nextIndex);
     }
 
     incomingOpacity.stopAnimation();
@@ -93,7 +110,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
     Animated.timing(incomingOpacity, {
       toValue: 1,
-      duration: 420,
+      duration: 320,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start(({ finished }) => {
@@ -101,11 +118,30 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         return;
       }
       activeLayerRef.current = incomingLayer;
-      activeBackgroundIndexRef.current = centeredIndex;
+      activeBackgroundIndexRef.current = nextIndex;
+      transitionTargetIndexRef.current = nextIndex;
+      setActiveBackgroundIndex(nextIndex);
       outgoingOpacity.setValue(0);
       incomingOpacity.setValue(1);
     });
-  }, [centeredIndex, layerAOpacity, layerBOpacity]);
+  }, [layerAOpacity, layerBOpacity]);
+
+  const requestBackgroundIndex = useCallback((nextIndex: number) => {
+    startBackgroundTransition(nextIndex);
+  }, [startBackgroundTransition]);
+
+  useEffect(() => {
+    requestBackgroundIndex(focusedIndex);
+  }, [focusedIndex, requestBackgroundIndex]);
+
+  const handleCenteredIndexChange = useCallback((nextIndex: number) => {
+    setCenteredIndex(nextIndex);
+    setFocusedIndex(nextIndex);
+  }, []);
+
+  const handlePreviewIndexChange = useCallback((nextIndex: number) => {
+    setFocusedIndex(nextIndex);
+  }, []);
 
   const handleFeedback = async () => {
     const isAvailable = await MailComposer.isAvailableAsync();
@@ -153,13 +189,29 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     void playPlop();
   };
 
+  const backgroundFallbackSource = Array.isArray(scenes[activeBackgroundIndex].homeBackgroundSource)
+    ? scenes[activeBackgroundIndex].homeBackgroundSource[0]
+    : scenes[activeBackgroundIndex].homeBackgroundSource;
+
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.backgroundOverlay, { opacity: layerAOpacity }]} pointerEvents="none">
-        <Image source={scenes[layerAIndex].homeBackgroundSource} style={styles.backgroundLayer} resizeMode="cover" />
+        <Image
+          source={scenes[layerAIndex].homeBackgroundSource}
+          defaultSource={backgroundFallbackSource}
+          fadeDuration={0}
+          style={styles.backgroundLayer}
+          resizeMode="cover"
+        />
       </Animated.View>
       <Animated.View style={[styles.backgroundOverlay, { opacity: layerBOpacity }]} pointerEvents="none">
-        <Image source={scenes[layerBIndex].homeBackgroundSource} style={styles.backgroundLayer} resizeMode="cover" />
+        <Image
+          source={scenes[layerBIndex].homeBackgroundSource}
+          defaultSource={backgroundFallbackSource}
+          fadeDuration={0}
+          style={styles.backgroundLayer}
+          resizeMode="cover"
+        />
       </Animated.View>
 
       <View style={styles.contentLayer}>
@@ -190,7 +242,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <SceneCarousel
             scenes={scenes}
             centeredIndex={centeredIndex}
-            onCenteredIndexChange={setCenteredIndex}
+            onCenteredIndexChange={handleCenteredIndexChange}
+            onPreviewIndexChange={handlePreviewIndexChange}
             onCardPress={(index, sceneId) => {
               const scene = scenes.find((item) => item.id === sceneId);
               if (!scene) {

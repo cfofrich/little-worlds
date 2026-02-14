@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, ImageSourcePropType, PanResponder, StyleSheet } from 'react-native';
+import { Animated, Easing, ImageSourcePropType, PanResponder, StyleSheet } from 'react-native';
 import StickerVisual from './StickerVisual';
 
 type DraggablePlacedStickerProps = {
@@ -64,13 +64,66 @@ export default function DraggablePlacedSticker({
   onDragEnd,
 }: DraggablePlacedStickerProps) {
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
+  const popScale = useRef(new Animated.Value(1)).current;
+  const removeScale = useRef(new Animated.Value(1)).current;
+  const removeOpacity = useRef(new Animated.Value(1)).current;
+  const removeShiftY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!popOnMount) {
+      return;
+    }
+
+    popScale.setValue(0.9);
+    Animated.sequence([
+      Animated.timing(popScale, {
+        toValue: 1.1,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+      Animated.timing(popScale, {
+        toValue: 1,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [popOnMount, popScale]);
+
   useEffect(() => {
     if (!isRemoving) {
       return;
     }
 
-    onRemoveAnimationComplete?.(instanceId);
-  }, [instanceId, isRemoving, onRemoveAnimationComplete]);
+    Animated.parallel([
+      Animated.timing(removeScale, {
+        toValue: 0.78,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(removeOpacity, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(removeShiftY, {
+        toValue: 36,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onRemoveAnimationComplete?.(instanceId);
+    });
+  }, [
+    instanceId,
+    isRemoving,
+    onRemoveAnimationComplete,
+    removeOpacity,
+    removeScale,
+    removeShiftY,
+  ]);
 
   const panResponder = useMemo(
     () =>
@@ -137,13 +190,16 @@ export default function DraggablePlacedSticker({
         {
           width: size,
           height: size,
+          opacity: removeOpacity,
           transform: [
             { translateX: pan.x },
             { translateY: pan.y },
+            { translateY: removeShiftY },
+            { scale: Animated.multiply(popScale, removeScale) },
           ],
         },
       ]}
-      {...panResponder.panHandlers}
+      {...(!isRemoving ? panResponder.panHandlers : {})}
     >
       <StickerVisual
         size={size}

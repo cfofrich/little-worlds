@@ -33,60 +33,59 @@ function sticker(
 }
 
 const PLAYGROUND_STICKERS: StickerDefinition[] = [
-  sticker('playground-beachball', 'beachball', '#ef4444', require('../../assets/stickers/playground/beachball.png')),
-  sticker('playground-cat', 'cat', '#f97316', require('../../assets/stickers/playground/cat.png')),
-  sticker('playground-dog', 'dog', '#a16207', require('../../assets/stickers/playground/dog.png')),
+  sticker('playground-cat', 'Cat', '#f97316', require('../../assets/stickers/playground/cat.png')),
+  sticker('playground-dog', 'Dog', '#a16207', require('../../assets/stickers/playground/dog.png')),
   sticker(
     'playground-dumptrucktransparent',
-    'dumptrucktransparent',
+    'Dump Truck',
     '#f59e0b',
     require('../../assets/stickers/playground/dumptrucktransparent.png')
   ),
-  sticker('playground-kite', 'kite', '#0ea5e9', require('../../assets/stickers/playground/kite.png')),
-  sticker('playground-seasaw', 'seasaw', '#8b5cf6', require('../../assets/stickers/playground/seasaw.png')),
-  sticker('playground-slide', 'slide', '#22c55e', require('../../assets/stickers/playground/slide.png')),
-  sticker('playground-soccerball', 'soccerball', '#eab308', require('../../assets/stickers/playground/soccerball.png')),
-  sticker('playground-toddlerboy', 'toddlerboy', '#3b82f6', require('../../assets/stickers/playground/toddlerboy.png')),
-  sticker('playground-toddlergirl', 'toddlergirl', '#ec4899', require('../../assets/stickers/playground/toddlergirl.png')),
-  sticker('playground-tree', 'tree', '#16a34a', require('../../assets/stickers/playground/tree.png')),
+  sticker('playground-kite', 'Kite', '#0ea5e9', require('../../assets/stickers/playground/kite.png')),
+  sticker('playground-seasaw', 'Seesaw', '#8b5cf6', require('../../assets/stickers/playground/seasaw.png')),
+  sticker('playground-slide', 'Slide', '#22c55e', require('../../assets/stickers/playground/slide.png')),
+  sticker('playground-soccerball', 'Soccer Ball', '#eab308', require('../../assets/stickers/playground/soccerball.png')),
+  sticker('playground-toddlerboy', 'Boy', '#3b82f6', require('../../assets/stickers/playground/toddlerboy.png')),
+  sticker('playground-toddlergirl', 'Girl', '#ec4899', require('../../assets/stickers/playground/toddlergirl.png')),
+  sticker('playground-tree', 'Tree', '#16a34a', require('../../assets/stickers/playground/tree.png')),
 ];
 
 const BEACH_STICKERS: StickerDefinition[] = [
   sticker('beach-beach-ball', 'Beach Ball', '#ef4444', require('../../assets/stickers/beach/Beach Ball.png')),
   sticker('beach-crab', 'Crab', '#f97316', require('../../assets/stickers/beach/Crab.png')),
   sticker('beach-sand-castle', 'Sand Castle', '#f59e0b', require('../../assets/stickers/beach/Sand Castle.png')),
-  sticker('beach-sailboat', 'sailboat', '#06b6d4', require('../../assets/stickers/beach/sailboat.png')),
+  sticker('beach-sailboat', 'Sailboat', '#06b6d4', require('../../assets/stickers/beach/sailboat.png')),
   sticker('beach-starfish', 'Starfish', '#fb7185', require('../../assets/stickers/beach/Starfish.png')),
-  sticker('beach-sun', 'sun', '#eab308', require('../../assets/stickers/beach/sun.png')),
+  sticker('beach-sun', 'Sun', '#eab308', require('../../assets/stickers/beach/sun.png')),
   sticker('beach-surfboard', 'Surfboard', '#3b82f6', require('../../assets/stickers/beach/Surfboard.png')),
-  sticker('beach-umbrella', 'umbrella', '#a855f7', require('../../assets/stickers/beach/umbrella.png')),
+  sticker('beach-umbrella', 'Umbrella', '#a855f7', require('../../assets/stickers/beach/umbrella.png')),
 ];
 
 const CONSTRUCTION_STICKERS: StickerDefinition[] = [
-  sticker('construction-bulldozer', 'bulldozer', '#f59e0b', require('../../assets/stickers/construction/bulldozer.png')),
+  sticker('construction-bulldozer', 'Bulldozer', '#f59e0b', require('../../assets/stickers/construction/bulldozer.png')),
   sticker(
     'construction-construction-worker',
-    'construction worker',
+    'Construction Worker',
     '#f97316',
     require('../../assets/stickers/construction/construction worker.png')
   ),
-  sticker('construction-crane', 'crane', '#facc15', require('../../assets/stickers/construction/crane.png')),
-  sticker('construction-dump-truck', 'dump truck', '#eab308', require('../../assets/stickers/construction/dump truck.png')),
-  sticker('construction-excavator', 'excavator', '#fb923c', require('../../assets/stickers/construction/excavator.png')),
-  sticker('construction-orange-barrel', 'orange barrel', '#f87171', require('../../assets/stickers/construction/orange barrel.png')),
-  sticker('construction-traffic-cone', 'traffic cone', '#ef4444', require('../../assets/stickers/construction/traffic cone.png')),
-  sticker('construction-wheelbarrow', 'wheelbarrow', '#0ea5e9', require('../../assets/stickers/construction/wheelbarrow.png')),
+  sticker('construction-crane', 'Crane', '#facc15', require('../../assets/stickers/construction/crane.png')),
+  sticker('construction-dump-truck', 'Dump Truck', '#eab308', require('../../assets/stickers/construction/dumptruck.png')),
+  sticker('construction-excavator', 'Excavator', '#fb923c', require('../../assets/stickers/construction/excavator.png')),
+  sticker('construction-orange-barrel', 'Orange Barrel', '#f87171', require('../../assets/stickers/construction/orange barrel.png')),
+  sticker('construction-traffic-cone', 'Traffic Cone', '#ef4444', require('../../assets/stickers/construction/traffic cone.png')),
+  sticker('construction-wheelbarrow', 'Wheelbarrow', '#0ea5e9', require('../../assets/stickers/construction/wheelbarrow.png')),
 ];
 
 const FARM_STICKERS: StickerDefinition[] = [
-  sticker('farm-chicken', 'chicken', '#f59e0b', require('../../assets/stickers/farm/chicken.png')),
+  sticker('farm-chicken', 'Chicken', '#f59e0b', require('../../assets/stickers/farm/chicken.png')),
   sticker('farm-cow', 'Cow', '#94a3b8', require('../../assets/stickers/farm/Cow.png')),
-  sticker('farm-farmer', 'farmer', '#2563eb', require('../../assets/stickers/farm/farmer.png')),
-  sticker('farm-horse', 'horse', '#a16207', require('../../assets/stickers/farm/horse.png')),
+  sticker('farm-farmer', 'Farmer', '#2563eb', require('../../assets/stickers/farm/farmer.png')),
+  sticker('farm-horse', 'Horse', '#a16207', require('../../assets/stickers/farm/horse.png')),
   sticker('farm-jackrabbit', 'Jackrabbit', '#64748b', require('../../assets/stickers/farm/Jackrabbit.png')),
   sticker('farm-pig', 'Pig', '#ec4899', require('../../assets/stickers/farm/Pig.png')),
-  sticker('farm-sheep', 'sheep', '#22c55e', require('../../assets/stickers/farm/sheep.png')),
-  sticker('farm-tractor', 'tractor', '#16a34a', require('../../assets/stickers/farm/tractor.png')),
+  sticker('farm-sheep', 'Sheep', '#22c55e', require('../../assets/stickers/farm/sheep.png')),
+  sticker('farm-tractor', 'Tractor', '#16a34a', require('../../assets/stickers/farm/tractor.png')),
 ];
 
 const SPACE_STICKERS: StickerDefinition[] = [
