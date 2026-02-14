@@ -26,8 +26,7 @@ export default function App() {
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
-            animation: 'fade',
-            animationDuration: 220,
+            animation: 'none',
           }}
         >
           <Stack.Screen

@@ -1,5 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../../App';
 import { StickerDefinition } from '../components/stickers/types';
 
 export type WorldId = 'playground' | 'beach' | 'construction' | 'farm' | 'space';

@@ -54,33 +54,19 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const scenes = useMemo(() => HOME_SCENES, []);
 
   useEffect(() => {
-    let cancelled = false;
+    const prefetchTasks = scenes.flatMap((scene) => {
+      const assets = [scene.homeBackgroundSource, scene.imageSource];
+      return assets
+        .map((assetSource) => Image.resolveAssetSource(assetSource))
+        .filter((resolved) => resolved?.uri)
+        .map((resolved) => Image.prefetch(resolved.uri));
+    });
 
-    const preloadBackgrounds = async () => {
-      const preloadTasks = scenes.map((scene) => {
-        const resolved = Image.resolveAssetSource(scene.homeBackgroundSource);
-        if (resolved?.uri) {
-          return Image.prefetch(resolved.uri);
-        }
-        return Promise.resolve(false);
-      });
+    if (!prefetchTasks.length) {
+      return;
+    }
 
-      try {
-        await Promise.all(preloadTasks);
-      } catch {
-        // Non-blocking fallback.
-      }
-
-      if (cancelled) {
-        return;
-      }
-    };
-
-    void preloadBackgrounds();
-
-    return () => {
-      cancelled = true;
-    };
+    void Promise.all(prefetchTasks).catch(() => {});
   }, [scenes]);
 
   useEffect(() => {
@@ -135,13 +121,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     });
   };
 
-  const handleCardPress = (index: number, routeName: keyof RootStackParamList) => {
-    if (index !== centeredIndex || routeName === 'Home') {
+  const handleCardPress = (_index: number, routeName: keyof RootStackParamList) => {
+    if (routeName === 'Home') {
       return;
     }
 
-    void playPlop();
     navigation.navigate(routeName);
+    void playPlop();
   };
 
   const handleLogoPress = () => {

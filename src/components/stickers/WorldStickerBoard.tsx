@@ -8,15 +8,12 @@ import {
 import {
   ReactNode,
   forwardRef,
-  useEffect,
   useImperativeHandle,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import DraggablePlacedSticker from './DraggablePlacedSticker';
 import StickerTray from './StickerTray';
-import StickerVisual from './StickerVisual';
 import { PlacedSticker, StickerDefinition, StickerTrayTheme } from './types';
 import { useSound } from '../../context/SoundContext';
 
@@ -39,11 +36,9 @@ type WorldStickerBoardProps = {
 
 type ActiveTrayDrag = {
   stickerId: string;
-  x: number;
-  y: number;
 };
 
-const DEFAULT_TRAY_HEIGHT = 196;
+const DEFAULT_TRAY_HEIGHT = 224;
 const DEFAULT_STICKER_SIZE = 92;
 const TRAY_HORIZONTAL_INSET = 44;
 const CLEANUP_RETURN_DEPTH = 42;
@@ -79,18 +74,7 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
     const { playPlop, playCleanup } = useSound();
     const [layout, setLayout] = useState({ width: 0, height: 0 });
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
-    const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
     const [activeTrayDrag, setActiveTrayDrag] = useState<ActiveTrayDrag | null>(null);
-    const [activePlacedDragStickerId, setActivePlacedDragStickerId] = useState<string | null>(null);
-
-    const cleanupTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
-
-    useEffect(() => {
-      return () => {
-        cleanupTimersRef.current.forEach((timer) => clearTimeout(timer));
-        cleanupTimersRef.current = [];
-      };
-    }, []);
 
     const stickerMap = useMemo(() => {
       return stickers.reduce<Record<string, StickerDefinition>>((acc, item) => {
@@ -110,40 +94,16 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
       if (!placedStickers.length) {
         return;
       }
-
-      cleanupTimersRef.current.forEach((timer) => clearTimeout(timer));
-      cleanupTimersRef.current = [];
-
-      placedStickers.forEach((placed, index) => {
-        const timer = setTimeout(() => {
-          setRemovingIds((current) => {
-            if (current.has(placed.instanceId)) {
-              return current;
-            }
-            const next = new Set(current);
-            next.add(placed.instanceId);
-            return next;
-          });
-        }, index * 55);
-
-        cleanupTimersRef.current.push(timer);
-      });
+      setPlacedStickers([]);
     };
 
     useImperativeHandle(ref, () => ({ cleanupAll }), [placedStickers]);
 
-    const handleTrayDragStart = (stickerId: string, x: number, y: number) => {
-      setActiveTrayDrag({ stickerId, x, y });
+    const handleTrayDragStart = (stickerId: string) => {
+      setActiveTrayDrag({ stickerId });
     };
 
-    const handleTrayDragMove = (stickerId: string, x: number, y: number) => {
-      setActiveTrayDrag((current) => {
-        if (!current || current.stickerId !== stickerId) {
-          return { stickerId, x, y };
-        }
-        return { ...current, x, y };
-      });
-    };
+    const handleTrayDragMove = (_stickerId: string, _x: number, _y: number) => {};
 
     const handleTrayDragEnd = (stickerId: string, x: number, y: number) => {
       setActiveTrayDrag(null);
@@ -165,16 +125,6 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
 
       setPlacedStickers((current) => [...current, newSticker]);
       void playPlop();
-    };
-
-    const handleRemoveAnimationComplete = (instanceId: string) => {
-      setPlacedStickers((current) => current.filter((item) => item.instanceId !== instanceId));
-
-      setRemovingIds((current) => {
-        const next = new Set(current);
-        next.delete(instanceId);
-        return next;
-      });
     };
 
     const handleStickerRelease = ({
@@ -201,15 +151,8 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
         return;
       }
 
-      setRemovingIds((current) => {
-        if (current.has(instanceId)) {
-          return current;
-        }
-        const next = new Set(current);
-        next.add(instanceId);
-        void playCleanup();
-        return next;
-      });
+      setPlacedStickers((current) => current.filter((item) => item.instanceId !== instanceId));
+      void playCleanup();
     };
 
     const dragBounds = {
@@ -218,8 +161,6 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
       minY: 0,
       maxY: Math.max(0, layout.height - placedStickerSize),
     };
-
-    const activeDragSticker = activeTrayDrag ? stickerMap[activeTrayDrag.stickerId] : undefined;
 
     return (
       <View style={styles.container} onLayout={handleLayout}>
@@ -258,38 +199,11 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
                   onRelease={handleStickerRelease}
                   glowColor={sticker.glowColor ?? sticker.color}
                   glowActive={false}
-                  isRemoving={removingIds.has(placed.instanceId)}
-                  onRemoveAnimationComplete={handleRemoveAnimationComplete}
-                  popOnMount
-                  onDragStart={setActivePlacedDragStickerId}
-                  onDragEnd={() => setActivePlacedDragStickerId(null)}
+                  popOnMount={false}
                 />
               );
             })}
 
-            {activeTrayDrag && activeDragSticker ? (
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.dragGhost,
-                  {
-                    width: placedStickerSize,
-                    height: placedStickerSize,
-                    left: activeTrayDrag.x - placedStickerSize / 2,
-                    top: activeTrayDrag.y - placedStickerSize / 2,
-                  },
-                ]}
-              >
-                <StickerVisual
-                  size={placedStickerSize}
-                  name={activeDragSticker.name}
-                  color={activeDragSticker.color}
-                  imageSource={activeDragSticker.imageSource}
-                  imageScale={activeDragSticker.imageScale}
-                  imageOffsetY={activeDragSticker.imageOffsetY}
-                />
-              </View>
-            ) : null}
           </View>
 
           <View pointerEvents="box-none" style={styles.contentLayer}>
@@ -306,8 +220,8 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
           onTrayDragStart={handleTrayDragStart}
           onTrayDragMove={handleTrayDragMove}
           onTrayDragEnd={handleTrayDragEnd}
-          highlightDropZone={Boolean(activeTrayDrag) || Boolean(activePlacedDragStickerId)}
-          activeStickerId={activeTrayDrag?.stickerId ?? activePlacedDragStickerId ?? undefined}
+          highlightDropZone={false}
+          activeStickerId={activeTrayDrag?.stickerId}
           trayAssetSource={trayAssetSource}
           contentOffsetY={trayContentOffsetY}
         />
@@ -350,9 +264,5 @@ const styles = StyleSheet.create({
   playLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 2,
-  },
-  dragGhost: {
-    position: 'absolute',
-    opacity: 0.95,
   },
 });

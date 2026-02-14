@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { InteractionManager } from 'react-native';
 
 type SoundContextType = {
   soundEnabled: boolean;
@@ -81,9 +82,16 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    void ensureSoundsLoaded();
+    const task = InteractionManager.runAfterInteractions(() => {
+      void ensureSoundsLoaded();
+    });
+    const timer = setTimeout(() => {
+      void ensureSoundsLoaded();
+    }, 900);
 
     return () => {
+      task.cancel();
+      clearTimeout(timer);
       const loadedAudio = loadedAudioRef.current;
       loadedAudioRef.current = null;
       if (!loadedAudio) {
@@ -138,7 +146,8 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     }
 
     if (!loadedAudioRef.current) {
-      await ensureSoundsLoaded();
+      void ensureSoundsLoaded();
+      return;
     }
 
     const loadedAudio = loadedAudioRef.current;

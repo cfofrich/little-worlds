@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MailComposer from 'expo-mail-composer';
@@ -25,44 +25,13 @@ const DEFAULT_TRAY_THEME: StickerTrayTheme = {
   cleanupSlotBackground: 'rgba(255, 255, 255, 0.88)',
 };
 
-function usePressPulse() {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const pulse = () => {
-    scale.setValue(1);
-    Animated.sequence([
-      Animated.timing(scale, {
-        toValue: 0.93,
-        duration: 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 1.08,
-        duration: 130,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 1,
-        duration: 110,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  return { scale, pulse };
-}
-
 export default function WorldSceneShell({ navigation, world }: WorldSceneShellProps) {
   const insets = useSafeAreaInsets();
   const boardRef = useRef<WorldStickerBoardHandle>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const { playPlop, soundEnabled, toggleSound } = useSound();
+  const { soundEnabled, toggleSound } = useSound();
 
-  const homePulse = usePressPulse();
-  const cleanupPulse = usePressPulse();
-  const settingsPulse = usePressPulse();
-
-  const topOffset = insets.top + 20;
+  const topOffset = insets.top + 26;
 
   const handleFeedback = async () => {
     const isAvailable = await MailComposer.isAvailableAsync();
@@ -79,20 +48,14 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   };
 
   const handleHomePress = () => {
-    homePulse.pulse();
-    void playPlop();
-    navigation.navigate('Home');
+    navigation.popToTop();
   };
 
   const handleCleanupPress = () => {
-    cleanupPulse.pulse();
-    void playPlop();
     boardRef.current?.cleanupAll();
   };
 
   const handleSettingsOpen = () => {
-    settingsPulse.pulse();
-    void playPlop();
     setSettingsVisible(true);
   };
 
@@ -102,8 +65,8 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
         ref={boardRef}
         backgroundSource={world.worldBackgroundSource}
         trayAssetSource={require('../../../assets/backgrounds/stickertray.png')}
-        trayHeight={196}
-        trayContentOffsetY={-12}
+        trayHeight={220}
+        trayContentOffsetY={0}
         stickers={world.stickers}
         worldLabel={world.worldLabel}
         trayTheme={DEFAULT_TRAY_THEME}
@@ -116,13 +79,11 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
             activeOpacity={0.85}
             onPress={handleHomePress}
           >
-            <Animated.View style={[styles.imageButtonInner, { transform: [{ scale: homePulse.scale }] }]}>
-              <Image
-                source={require('../../../assets/enhanceduibuttons/homebutton.png')}
-                style={styles.homeButtonImage}
-                resizeMode="contain"
-              />
-            </Animated.View>
+            <Image
+              source={require('../../../assets/enhanceduibuttons/homebutton.png')}
+              style={styles.homeButtonImage}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -130,13 +91,11 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
             activeOpacity={0.85}
             onPress={handleCleanupPress}
           >
-            <Animated.View style={[styles.imageButtonInner, { transform: [{ scale: cleanupPulse.scale }] }]}>
-              <Image
-                source={require('../../../assets/enhanceduibuttons/cleanup.png')}
-                style={styles.cleanupButtonImage}
-                resizeMode="contain"
-              />
-            </Animated.View>
+            <Image
+              source={require('../../../assets/enhanceduibuttons/cleanup.png')}
+              style={styles.cleanupButtonImage}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -144,9 +103,9 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
             onPress={handleSettingsOpen}
             activeOpacity={0.85}
           >
-            <Animated.View style={[styles.settingsIcon, { transform: [{ scale: settingsPulse.scale }] }]}>
+            <View style={styles.settingsIcon}>
               <Text style={styles.settingsText}>⚙️</Text>
-            </Animated.View>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -157,9 +116,6 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
         onToggleSound={toggleSound}
         onClose={() => setSettingsVisible(false)}
         onFeedbackPress={handleFeedback}
-        onButtonPress={() => {
-          void playPlop();
-        }}
       />
     </View>
   );
@@ -178,39 +134,36 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    height: 100,
+    height: 124,
+    overflow: 'visible',
   },
   homeButton: {
     position: 'absolute',
     left: 0,
     top: 0,
-    width: 176,
-    height: 88,
+    width: 206,
+    height: 104,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'visible',
   },
   cleanupButton: {
     position: 'absolute',
     top: 0,
     left: '50%',
-    marginLeft: -115,
-    width: 230,
-    height: 88,
+    marginLeft: -145,
+    width: 290,
+    height: 104,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'visible',
   },
   settingsButton: {
     position: 'absolute',
     right: 0,
-    top: 0,
-    width: 88,
-    height: 88,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageButtonInner: {
-    width: '100%',
-    height: '100%',
+    top: 36,
+    width: 74,
+    height: 74,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -223,9 +176,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   settingsIcon: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     backgroundColor: 'rgba(255, 255, 255, 0.62)',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.75)',
@@ -238,7 +191,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   settingsText: {
-    fontSize: 50,
+    fontSize: 38,
     marginTop: -2,
   },
 });

@@ -4,7 +4,6 @@ import {
   ImageBackground,
   ImageSourcePropType,
   PanResponder,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,7 +11,7 @@ import {
 import StickerVisual from './StickerVisual';
 import { StickerDefinition, StickerTrayTheme } from './types';
 
-export const TRAY_ITEM_SIZE = 58;
+export const TRAY_ITEM_SIZE = 52;
 
 type StickerTrayProps = {
   stickers: StickerDefinition[];
@@ -44,8 +43,8 @@ function TrayItem({
   onDragMove,
   onDragEnd,
   labelColor,
-  highlightDropZone,
-  isActiveSticker,
+  highlightDropZone: _highlightDropZone,
+  isActiveSticker: _isActiveSticker,
 }: TrayItemProps) {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -78,19 +77,7 @@ function TrayItem({
 
   return (
     <View style={[styles.trayButton, isDragging && styles.trayButtonDragging]} {...panResponder.panHandlers}>
-      <View
-        style={[
-          styles.stickerFrame,
-          isActiveSticker && styles.stickerFrameActive,
-          highlightDropZone && isActiveSticker && styles.stickerFrameDropHint,
-          highlightDropZone && isActiveSticker
-            ? {
-                borderColor: sticker.glowColor ?? sticker.color,
-                shadowColor: sticker.glowColor ?? sticker.color,
-              }
-            : null,
-        ]}
-      >
+      <View style={styles.stickerFrame}>
         <StickerVisual
           size={TRAY_ITEM_SIZE}
           name={sticker.name}
@@ -110,7 +97,7 @@ function TrayItem({
 export default function StickerTray({
   stickers,
   trayHeight,
-  worldLabel,
+  worldLabel: _worldLabel,
   theme,
   onTrayDragStart,
   onTrayDragMove,
@@ -122,20 +109,9 @@ export default function StickerTray({
 }: StickerTrayProps) {
   const hasTrayAsset = Boolean(trayAssetSource);
 
-  const trayHeader = (
-    <View style={styles.headerRow}>
-      <Text style={[styles.headerText, { color: theme.trayLabelText }]}>{worldLabel ?? 'Stickers'}</Text>
-      <Text style={[styles.modeText, { color: theme.trayLabelText }]}>
-        {highlightDropZone ? 'Release in tray to put away' : 'Drag to place'}
-      </Text>
-    </View>
-  );
-
   const trayItems = (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[
+    <View
+      style={[
         styles.trayContent,
         contentOffsetY !== 0 && { transform: [{ translateY: contentOffsetY }] },
       ]}
@@ -152,7 +128,7 @@ export default function StickerTray({
           isActiveSticker={activeStickerId === sticker.id}
         />
       ))}
-    </ScrollView>
+    </View>
   );
 
   return (
@@ -173,13 +149,10 @@ export default function StickerTray({
           imageStyle={styles.assetBackgroundImage}
           resizeMode="stretch"
         >
-          {highlightDropZone ? <View style={styles.trayHighlightOverlay} /> : null}
-          {trayHeader}
           {trayItems}
         </ImageBackground>
       ) : (
         <>
-          {trayHeader}
           {trayItems}
         </>
       )}
@@ -190,9 +163,9 @@ export default function StickerTray({
 const styles = StyleSheet.create({
   tray: {
     position: 'absolute',
-    left: 44,
-    right: 44,
-    bottom: 0,
+    left: 36,
+    right: 36,
+    bottom: 14,
     borderTopWidth: 0,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -201,50 +174,28 @@ const styles = StyleSheet.create({
   assetBackground: {
     flex: 1,
     paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 10,
+    paddingTop: 30,
+    paddingBottom: 16,
+    justifyContent: 'center',
   },
   assetBackgroundImage: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-  },
-  trayHighlightOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 22,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    backgroundColor: 'rgba(255, 244, 196, 0.12)',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-    paddingHorizontal: 8,
-  },
-  headerText: {
-    fontSize: 14,
-    lineHeight: 16,
-    fontWeight: '800',
-  },
-  modeText: {
-    fontSize: 12,
-    lineHeight: 14,
-    fontWeight: '700',
-    opacity: 0.84,
+    transform: [{ scaleY: 1.9 }, { translateY: 18 }],
   },
   trayContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     minWidth: '100%',
   },
   trayButton: {
-    marginHorizontal: 8,
+    marginHorizontal: 6,
     alignItems: 'center',
-    width: 84,
-    minHeight: 112,
+    width: 72,
+    minHeight: 84,
+    justifyContent: 'center',
   },
   trayButtonDragging: {
     opacity: 0.35,
@@ -252,24 +203,11 @@ const styles = StyleSheet.create({
   stickerFrame: {
     borderRadius: 18,
     padding: 2,
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  stickerFrameActive: {
-    transform: [{ scale: 1.07 }],
-  },
-  stickerFrameDropHint: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 7,
-    elevation: 5,
   },
   stickerLabel: {
-    marginTop: 4,
-    fontSize: 12,
-    lineHeight: 14,
+    marginTop: 2,
+    fontSize: 11,
+    lineHeight: 12,
     fontWeight: '800',
     textAlign: 'center',
     textShadowColor: 'rgba(255, 255, 255, 0.45)',

@@ -87,6 +87,10 @@ export default function SceneCarousel({
     reportCenteredIndexFromOffset(event.nativeEvent.contentOffset.x);
   };
 
+  const handleScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    reportCenteredIndexFromOffset(event.nativeEvent.contentOffset.x);
+  };
+
   const renderCard = ({ item, index }: { item: SceneItem; index: number }) => {
     const inputRange = [
       (index - 1) * snapInterval,
@@ -161,10 +165,8 @@ export default function SceneCarousel({
       decelerationRate="fast"
       onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
         useNativeDriver: true,
-        listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-          reportCenteredIndexFromOffset(event.nativeEvent.contentOffset.x);
-        },
       })}
+      onScrollEndDrag={handleScrollEndDrag}
       onMomentumScrollEnd={handleMomentumScrollEnd}
       scrollEventThrottle={16}
       ItemSeparatorComponent={() => <View style={{ width: spacing }} />}
