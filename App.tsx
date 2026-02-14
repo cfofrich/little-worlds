@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Image, ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
@@ -8,7 +8,6 @@ import BeachScene from './src/screens/BeachScene';
 import ConstructionScene from './src/screens/ConstructionScene';
 import FarmScene from './src/screens/FarmScene';
 import SpaceScene from './src/screens/SpaceScene';
-import { SoundProvider, useSound } from './src/context/SoundContext';
 import { getWorldConfig, WORLD_ORDER } from './src/data/worlds';
 
 export type RootStackParamList = {
@@ -32,6 +31,8 @@ const STATIC_IMAGE_ASSETS: ImageSourcePropType[] = [
   require('./assets/enhanceduibuttons/homebutton.png'),
   require('./assets/enhanceduibuttons/cleanup.png'),
 ];
+
+const PRELOAD_IMAGE_CONCURRENCY = 4;
 
 type PreloadAsset = {
   key: string;
@@ -135,11 +136,9 @@ function AppNavigator() {
 function LoadingScreen({
   loadedCount,
   totalCount,
-  soundsReady,
 }: {
   loadedCount: number;
   totalCount: number;
-  soundsReady: boolean;
 }) {
   const pct = totalCount > 0 ? Math.round((loadedCount / totalCount) * 100) : 100;
 
@@ -153,17 +152,13 @@ function LoadingScreen({
       />
       <Text style={styles.loadingText}>Loading Little Worlds...</Text>
       <Text style={styles.loadingSubtext}>{`Assets ${loadedCount}/${totalCount} (${pct}%)`}</Text>
-      <Text style={styles.loadingSubtext}>{soundsReady ? 'Sounds ready' : 'Loading sounds...'}</Text>
     </View>
   );
 }
 
 function AppBootstrap() {
-  const { preloadSounds } = useSound();
-  const [isReady, setIsReady] = useState(false);
-  const [soundsReady, setSoundsReady] = useState(false);
+  const [imagesReady, setImagesReady] = useState(false);
   const [loadedAssetCount, setLoadedAssetCount] = useState(0);
-  const loadedKeysRef = useRef<Set<string>>(new Set());
 
   const preloadAssets = useMemo(() => {
     const worldSources = WORLD_ORDER.flatMap((worldId) => {
@@ -185,91 +180,72 @@ function AppBootstrap() {
     let active = true;
 
     if (__DEV__) {
-      console.info(`[bootstrap] starting preload of ${preloadAssets.length} unique images + sounds`);
+      console.info(`[bootstrap] starting preload of ${preloadAssets.length} unique images`);
     }
 
-    const preload = async () => {
+    const preloadAll = async () => {
       try {
-        await preloadSounds();
-        if (active) {
-          setSoundsReady(true);
-          if (__DEV__) {
-            console.info('[bootstrap] sounds loaded');
+        const preloadImagesTask = async () => {
+          if (!preloadAssets.length) {
+            if (active) {
+              setLoadedAssetCount(0);
+              setImagesReady(true);
+            }
+            return;
           }
-        }
+
+          const queue = [...preloadAssets];
+          let completed = 0;
+          const workerCount = Math.max(1, Math.min(PRELOAD_IMAGE_CONCURRENCY, queue.length));
+
+          const worker = async () => {
+            while (active) {
+              const asset = queue.shift();
+              if (!asset) {
+                return;
+              }
+
+              await preloadImageSource(asset.source);
+              completed += 1;
+
+              if (active) {
+                setLoadedAssetCount(completed);
+                if (__DEV__ && (completed === preloadAssets.length || completed % 10 === 0)) {
+                  console.info(`[bootstrap] image assets loaded ${completed}/${preloadAssets.length}`);
+                }
+              }
+            }
+          };
+
+          await Promise.all(Array.from({ length: workerCount }, () => worker()));
+          if (active) {
+            setImagesReady(true);
+          }
+        };
+
+        await preloadImagesTask();
       } catch {
         if (active) {
-          setSoundsReady(true);
+          setImagesReady(true);
         }
       }
     };
 
-    void preload();
-
-    // Start a parallel prefetch pass to warm source caches before decode-keeping layer completes.
-    void Promise.all(preloadAssets.map((asset) => preloadImageSource(asset.source))).catch(() => {});
+    void preloadAll();
 
     return () => {
       active = false;
     };
-  }, [preloadAssets, preloadSounds]);
+  }, [preloadAssets]);
 
-  const markAssetLoaded = useCallback(
-    (key: string) => {
-      if (loadedKeysRef.current.has(key)) {
-        return;
-      }
-
-      loadedKeysRef.current.add(key);
-      const next = loadedKeysRef.current.size;
-      setLoadedAssetCount(next);
-
-      if (__DEV__ && (next === preloadAssets.length || next % 10 === 0)) {
-        console.info(`[bootstrap] image assets loaded ${next}/${preloadAssets.length}`);
-      }
-    },
-    [preloadAssets.length]
-  );
-
-  useEffect(() => {
-    if (isReady) {
-      return;
-    }
-
-    if (!soundsReady || loadedAssetCount < preloadAssets.length) {
-      return;
-    }
-
-    if (__DEV__) {
-      console.info('[bootstrap] all assets ready, mounting app');
-    }
-    setIsReady(true);
-  }, [isReady, loadedAssetCount, preloadAssets.length, soundsReady]);
-
-  const imageCacheLayer = (
-    <View pointerEvents="none" style={styles.assetCacheLayer}>
-      {preloadAssets.map((asset) => (
-        <Image
-          key={`cache-${asset.key}`}
-          source={asset.source}
-          style={styles.assetCacheImage}
-          resizeMode="cover"
-          fadeDuration={0}
-          onLoadEnd={() => markAssetLoaded(asset.key)}
-          onError={() => markAssetLoaded(asset.key)}
-        />
-      ))}
-    </View>
-  );
+  const isReady = imagesReady;
 
   if (!isReady) {
     return (
       <View style={styles.bootstrapRoot}>
-        {imageCacheLayer}
         <LoadingScreen
           loadedCount={loadedAssetCount}
           totalCount={preloadAssets.length}
-          soundsReady={soundsReady}
         />
       </View>
     );
@@ -277,18 +253,13 @@ function AppBootstrap() {
 
   return (
     <View style={styles.bootstrapRoot}>
-      {imageCacheLayer}
       <AppNavigator />
     </View>
   );
 }
 
 export default function App() {
-  return (
-    <SoundProvider>
-      <AppBootstrap />
-    </SoundProvider>
-  );
+  return <AppBootstrap />;
 }
 
 const styles = StyleSheet.create({
@@ -321,16 +292,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#4B6F7E',
-  },
-  assetCacheLayer: {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
-    overflow: 'hidden',
-  },
-  assetCacheImage: {
-    width: 1,
-    height: 1,
   },
 });

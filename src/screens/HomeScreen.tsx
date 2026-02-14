@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   Image,
-  ImageSourcePropType,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -17,12 +16,7 @@ import { RootStackParamList } from '../../App';
 import SceneCarousel from '../components/SceneCarousel';
 import SettingsModal from '../components/SettingsModal';
 import { useHomeLayoutMetrics, SPACING } from '../hooks/useHomeLayoutMetrics';
-import { useSound } from '../context/SoundContext';
-import { getWorldConfig, HOME_SCENES, WorldId } from '../data/worlds';
-
-const WORLD_HOME_BUTTON_SOURCE = require('../../assets/enhanceduibuttons/homebutton.png');
-const WORLD_CLEANUP_BUTTON_SOURCE = require('../../assets/enhanceduibuttons/cleanup.png');
-const WORLD_TRAY_SOURCE = require('../../assets/backgrounds/stickertray.png');
+import { HOME_SCENES } from '../data/worlds';
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -43,8 +37,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     titleTop,
   } = useHomeLayoutMetrics(screenWidth, screenHeight);
 
-  const { soundEnabled, toggleSound } = useSound();
-
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isNavigatingToWorld, setIsNavigatingToWorld] = useState(false);
   const [isTransitionVisible, setIsTransitionVisible] = useState(false);
@@ -64,54 +56,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const hasFocusedOnceRef = useRef(false);
 
   const scenes = useMemo(() => HOME_SCENES, []);
-
-  useEffect(() => {
-    const prefetchTasks = scenes
-      .flatMap((scene) => [scene.homeBackgroundSource, scene.imageSource])
-      .map((assetSource) => Image.resolveAssetSource(assetSource))
-      .filter((resolved) => resolved?.uri)
-      .map((resolved) => Image.prefetch(resolved.uri));
-
-    const uiAssets = [WORLD_HOME_BUTTON_SOURCE, WORLD_CLEANUP_BUTTON_SOURCE, WORLD_TRAY_SOURCE];
-    uiAssets.forEach((assetSource) => {
-      const resolved = Image.resolveAssetSource(assetSource);
-      if (resolved?.uri) {
-        prefetchTasks.push(Image.prefetch(resolved.uri));
-      }
-    });
-
-    if (!prefetchTasks.length) {
-      return;
-    }
-
-    void Promise.all(prefetchTasks).catch(() => {});
-  }, [scenes]);
-
-  const preloadSource = useCallback(async (source?: ImageSourcePropType) => {
-    if (!source) {
-      return;
-    }
-
-    const resolved = Image.resolveAssetSource(source);
-    if (!resolved?.uri) {
-      return;
-    }
-
-    await Image.prefetch(resolved.uri).catch(() => {});
-  }, []);
-
-  const preloadWorldAssets = useCallback(async (worldId: WorldId) => {
-    const world = getWorldConfig(worldId);
-    const sources: Array<ImageSourcePropType | undefined> = [
-      world.worldBackgroundSource,
-      WORLD_HOME_BUTTON_SOURCE,
-      WORLD_CLEANUP_BUTTON_SOURCE,
-      WORLD_TRAY_SOURCE,
-      ...world.stickers.map((sticker) => sticker.imageSource),
-    ];
-
-    await Promise.all(sources.map((source) => preloadSource(source)));
-  }, [preloadSource]);
 
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => {
@@ -229,8 +173,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     }
 
     setIsNavigatingToWorld(true);
-    await preloadWorldAssets(scene.id as WorldId);
-
     setIsTransitionVisible(true);
     transitionWashOpacity.stopAnimation();
     transitionWashOpacity.setValue(0);
@@ -320,7 +262,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
       <View style={styles.contentLayer}>
         <TouchableOpacity
-          style={[styles.header, { top: insets.top + 8 }]}
+          style={[styles.header, { top: insets.top + 6 }]}
           onPress={() => {
             setSettingsVisible(true);
           }}
@@ -366,8 +308,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
         <SettingsModal
           visible={settingsVisible}
-          soundEnabled={soundEnabled}
-          onToggleSound={toggleSound}
           onClose={() => setSettingsVisible(false)}
           onFeedbackPress={handleFeedback}
         />

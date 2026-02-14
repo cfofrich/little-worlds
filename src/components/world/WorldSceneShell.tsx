@@ -8,7 +8,6 @@ import { RootStackParamList } from '../../../App';
 import WorldStickerBoard, { WorldStickerBoardHandle } from '../stickers/WorldStickerBoard';
 import { StickerTrayTheme } from '../stickers/types';
 import { WorldConfig } from '../../data/worlds';
-import { useSound } from '../../context/SoundContext';
 import SettingsModal from '../SettingsModal';
 
 type WorldSceneShellProps = {
@@ -35,12 +34,11 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isLeavingHome, setIsLeavingHome] = useState(false);
   const [isTransitionVisible, setIsTransitionVisible] = useState(true);
-  const { soundEnabled, toggleSound, playCleanup } = useSound();
   const transitionWashOpacity = useRef(new Animated.Value(1)).current;
   const homePulseScale = useRef(new Animated.Value(1)).current;
   const cleanupPulseScale = useRef(new Animated.Value(1)).current;
 
-  const topOffset = insets.top + 20;
+  const topOffset = insets.top + 11;
 
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => {
@@ -63,22 +61,6 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
 
     return unsubscribeFocus;
   }, [navigation, transitionWashOpacity]);
-
-  useEffect(() => {
-    const sources = [
-      world.worldBackgroundSource,
-      HOME_BUTTON_SOURCE,
-      CLEANUP_BUTTON_SOURCE,
-      TRAY_SOURCE,
-      ...world.stickers.map((sticker) => sticker.imageSource).filter(Boolean),
-    ];
-    sources.forEach((source) => {
-      const resolved = Image.resolveAssetSource(source);
-      if (resolved?.uri) {
-        void Image.prefetch(resolved.uri).catch(() => {});
-      }
-    });
-  }, [world.worldBackgroundSource, world.stickers]);
 
   const handleFeedback = async () => {
     const isAvailable = await MailComposer.isAvailableAsync();
@@ -139,7 +121,6 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   const handleCleanupPress = () => {
     playButtonPulse(cleanupPulseScale);
     boardRef.current?.cleanupAll();
-    void playCleanup();
   };
 
   const handleSettingsOpen = () => {
@@ -210,8 +191,6 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
 
       <SettingsModal
         visible={settingsVisible}
-        soundEnabled={soundEnabled}
-        onToggleSound={toggleSound}
         onClose={() => setSettingsVisible(false)}
         onFeedbackPress={handleFeedback}
       />
@@ -252,7 +231,7 @@ const styles = StyleSheet.create({
   },
   homeButton: {
     position: 'absolute',
-    left: -10,
+    left: -40,
     top: 0,
     width: 309,
     height: 156,
@@ -274,7 +253,7 @@ const styles = StyleSheet.create({
   settingsButton: {
     position: 'absolute',
     right: 12,
-    top: 51,
+    top: 34,
     width: 37,
     height: 37,
     justifyContent: 'center',

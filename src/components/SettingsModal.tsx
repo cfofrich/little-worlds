@@ -1,10 +1,8 @@
 import {
-  Linking,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -13,8 +11,6 @@ import { useState } from 'react';
 
 type SettingsModalProps = {
   visible: boolean;
-  soundEnabled: boolean;
-  onToggleSound: () => void;
   onClose: () => void;
   onFeedbackPress: () => void;
   onButtonPress?: () => void;
@@ -24,10 +20,10 @@ const BUILD_SUMMARY_LINES = [
   'Little Worlds current build:',
   '- 5 themed worlds wired (Playground, Beach, Construction, Farm, Space).',
   '- Drag stickers from tray onto scene and drag back anytime to clean up.',
-  '- Manual cleanup plays a dedicated sound effect.',
+  '- Pinch placed stickers to resize (smaller or larger) while building a scene.',
+  '- You can drag stickers back to the tray to remove them without using Clean Up.',
   '- Top utility bar with Home, Clean Up, and Settings.',
   '- Dynamic home background transitions tied to selected world card.',
-  '- Credits section for sound attributions.',
 ];
 
 const PRIVACY_POLICY_LINES = [
@@ -55,23 +51,15 @@ const PRIVACY_POLICY_LINES = [
 
 export default function SettingsModal({
   visible,
-  soundEnabled,
-  onToggleSound,
   onClose,
   onFeedbackPress,
   onButtonPress,
 }: SettingsModalProps) {
-  const [showCredits, setShowCredits] = useState(false);
   const [showBuildSummary, setShowBuildSummary] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
 
   const playButtonSound = () => {
     onButtonPress?.();
-  };
-
-  const handleLinkPress = (url: string) => {
-    playButtonSound();
-    void Linking.openURL(url);
   };
 
   const handleClose = () => {
@@ -90,20 +78,6 @@ export default function SettingsModal({
         <Pressable style={styles.modalCard} onPress={() => {}}>
           <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
             <Text style={styles.modalTitle}>Settings</Text>
-
-            <View style={styles.settingsRow}>
-              <Text style={styles.settingsLabel}>Sound Effects</Text>
-              <Switch
-                value={soundEnabled}
-                onValueChange={() => {
-                  playButtonSound();
-                  onToggleSound();
-                }}
-                trackColor={{ false: '#D1D5DB', true: '#95D5A0' }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor="#D1D5DB"
-              />
-            </View>
 
             <TouchableOpacity style={styles.feedbackButton} onPress={handleFeedbackPress} activeOpacity={0.85}>
               <Text style={styles.feedbackButtonText}>Send Feedback</Text>
@@ -129,45 +103,6 @@ export default function SettingsModal({
                     </Text>
                   ))}
                 </ScrollView>
-              </View>
-            ) : null}
-
-            <TouchableOpacity
-              style={styles.sectionButton}
-              onPress={() => {
-                playButtonSound();
-                setShowCredits((prev) => !prev);
-              }}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.sectionButtonText}>{showCredits ? 'Hide Credits' : 'Credits'}</Text>
-            </TouchableOpacity>
-
-            {showCredits ? (
-              <View style={styles.panel}>
-                <Text style={styles.panelTitle}>Sound Effects:</Text>
-                <Text style={styles.panelText}>
-                  plop sound effect by Garuda1982 -- https://freesound.org/s/543183/ -- License: Attribution 4.0
-                </Text>
-                <Text style={styles.panelText}>
-                  LevelUp.wav by Kenneth_Cooney -- https://freesound.org/s/609335/ -- License: Creative Commons 0
-                </Text>
-
-                <TouchableOpacity
-                  style={styles.linkButton}
-                  onPress={() => handleLinkPress('https://freesound.org/s/543183/')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.linkButtonText}>Open plop source</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.linkButton}
-                  onPress={() => handleLinkPress('https://freesound.org/s/609335/')}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.linkButtonText}>Open cleanup source</Text>
-                </TouchableOpacity>
               </View>
             ) : null}
 
@@ -246,21 +181,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  settingsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
-    marginBottom: 10,
-  },
-  settingsLabel: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: '600',
-  },
   feedbackButton: {
     borderRadius: 16,
     paddingVertical: 12,
@@ -314,15 +234,6 @@ const styles = StyleSheet.create({
   },
   summaryScroll: {
     maxHeight: 150,
-  },
-  linkButton: {
-    marginTop: 6,
-  },
-  linkButtonText: {
-    color: '#1d4ed8',
-    fontSize: 13,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
   doneButton: {
     backgroundColor: '#95D5A0',

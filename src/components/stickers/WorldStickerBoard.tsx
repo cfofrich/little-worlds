@@ -17,7 +17,6 @@ import DraggablePlacedSticker from './DraggablePlacedSticker';
 import StickerTray from './StickerTray';
 import StickerVisual from './StickerVisual';
 import { PlacedSticker, StickerDefinition, StickerTrayTheme } from './types';
-import { useSound } from '../../context/SoundContext';
 
 export type WorldStickerBoardHandle = {
   cleanupAll: () => void;
@@ -73,7 +72,6 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
     },
     ref
   ) => {
-    const { playPlop, playCleanup } = useSound();
     const [layout, setLayout] = useState({ width: 0, height: 0 });
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
     const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
@@ -141,7 +139,6 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
       };
 
       setPlacedStickers((current) => [...current, newSticker]);
-      void playPlop();
     };
 
     const handleStickerRelease = ({
@@ -197,7 +194,6 @@ const WorldStickerBoard = forwardRef<WorldStickerBoardHandle, WorldStickerBoardP
         next.add(instanceId);
         return next;
       });
-      void playCleanup();
     };
 
     const handleRemoveAnimationComplete = (instanceId: string) => {
