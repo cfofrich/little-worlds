@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowDimensions } from 'react-native';
 import * as MailComposer from 'expo-mail-composer';
 import { RootStackParamList } from '../../../App';
 import WorldStickerBoard, { WorldStickerBoardHandle } from '../stickers/WorldStickerBoard';
@@ -30,6 +31,7 @@ const TRAY_SOURCE = require('../../../assets/backgrounds/stickertray.png');
 
 export default function WorldSceneShell({ navigation, world }: WorldSceneShellProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const boardRef = useRef<WorldStickerBoardHandle>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isLeavingHome, setIsLeavingHome] = useState(false);
@@ -38,7 +40,22 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   const homePulseScale = useRef(new Animated.Value(1)).current;
   const cleanupPulseScale = useRef(new Animated.Value(1)).current;
 
-  const topOffset = insets.top + 11;
+  const isPhoneLandscape = screenWidth < 1024;
+  const buttonScale = isPhoneLandscape ? 0.56 : 1;
+  const homeButtonWidth = Math.round(309 * buttonScale);
+  const homeButtonHeight = Math.round(156 * buttonScale);
+  const cleanupButtonWidth = Math.round(435 * buttonScale);
+  const cleanupButtonHeight = Math.round(156 * buttonScale);
+  const settingsButtonSize = isPhoneLandscape ? 30 : 37;
+  const topBarHeight = isPhoneLandscape ? 108 : 176;
+
+  const trayHeight = Math.round(
+    Math.min(220, Math.max(isPhoneLandscape ? 118 : 180, screenHeight * 0.26))
+  );
+  const trayContentOffsetY = isPhoneLandscape ? 12 : 20;
+  const placedStickerSize = isPhoneLandscape ? 78 : 92;
+
+  const topOffset = insets.top + (isPhoneLandscape ? 7 : 11);
 
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => {
@@ -133,17 +150,25 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
         ref={boardRef}
         backgroundSource={world.worldBackgroundSource}
         trayAssetSource={TRAY_SOURCE}
-        trayHeight={220}
-        trayContentOffsetY={20}
+        trayHeight={trayHeight}
+        trayContentOffsetY={trayContentOffsetY}
+        placedStickerSize={placedStickerSize}
         stickers={world.stickers}
         worldLabel={world.worldLabel}
         trayTheme={DEFAULT_TRAY_THEME}
       />
 
       <View pointerEvents="box-none" style={styles.overlay}>
-        <View style={[styles.topBar, { top: topOffset }]}>
+        <View style={[styles.topBar, { top: topOffset, height: topBarHeight }]}>
           <TouchableOpacity
-            style={styles.homeButton}
+            style={[
+              styles.homeButton,
+              {
+                width: homeButtonWidth,
+                height: homeButtonHeight,
+                left: isPhoneLandscape ? -14 : -40,
+              },
+            ]}
             activeOpacity={0.85}
             disabled={isLeavingHome}
             onPress={handleHomePress}
@@ -159,7 +184,14 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.cleanupButton}
+            style={[
+              styles.cleanupButton,
+              {
+                width: cleanupButtonWidth,
+                height: cleanupButtonHeight,
+                marginLeft: -Math.round(cleanupButtonWidth / 2),
+              },
+            ]}
             activeOpacity={0.85}
             disabled={isLeavingHome}
             onPress={handleCleanupPress}
@@ -177,13 +209,30 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.settingsButton}
+            style={[
+              styles.settingsButton,
+              {
+                width: settingsButtonSize,
+                height: settingsButtonSize,
+                top: isPhoneLandscape ? 15 : 34,
+                right: isPhoneLandscape ? 10 : 12,
+              },
+            ]}
             disabled={isLeavingHome}
             onPress={handleSettingsOpen}
             activeOpacity={0.85}
           >
-            <View style={styles.settingsIcon}>
-              <Text style={styles.settingsText}>⚙️</Text>
+            <View
+              style={[
+                styles.settingsIcon,
+                {
+                  width: settingsButtonSize,
+                  height: settingsButtonSize,
+                  borderRadius: settingsButtonSize / 2,
+                },
+              ]}
+            >
+              <Text style={[styles.settingsText, { fontSize: isPhoneLandscape ? 16 : 19 }]}>⚙️</Text>
             </View>
           </TouchableOpacity>
         </View>

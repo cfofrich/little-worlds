@@ -1,5 +1,4 @@
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -72,93 +71,96 @@ export default function SettingsModal({
     onFeedbackPress();
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <Pressable style={styles.modalOverlay} onPress={handleClose}>
-        <Pressable style={styles.modalCard} onPress={() => {}}>
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-            <Text style={styles.modalTitle}>Settings</Text>
+    <View style={styles.modalOverlay}>
+      <Pressable style={styles.backdrop} onPress={handleClose} />
+      <View style={styles.modalCard}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.modalTitle}>Settings</Text>
 
-            <TouchableOpacity style={styles.feedbackButton} onPress={handleFeedbackPress} activeOpacity={0.85}>
-              <Text style={styles.feedbackButtonText}>Send Feedback</Text>
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.feedbackButton} onPress={handleFeedbackPress} activeOpacity={0.85}>
+            <Text style={styles.feedbackButtonText}>Send Feedback</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.sectionButton}
-              onPress={() => {
-                playButtonSound();
-                setShowPrivacyPolicy((prev) => !prev);
-              }}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.sectionButtonText}>{showPrivacyPolicy ? 'Hide Privacy Policy' : 'Privacy Policy'}</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sectionButton}
+            onPress={() => {
+              playButtonSound();
+              setShowPrivacyPolicy((prev) => !prev);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.sectionButtonText}>{showPrivacyPolicy ? 'Hide Privacy Policy' : 'Privacy Policy'}</Text>
+          </TouchableOpacity>
 
-            {showPrivacyPolicy ? (
-              <View style={styles.panel}>
-                <ScrollView style={styles.summaryScroll} nestedScrollEnabled>
-                  {PRIVACY_POLICY_LINES.map((line, index) => (
-                    <Text key={`${line}-${index}`} style={styles.panelText}>
-                      {line}
-                    </Text>
-                  ))}
-                </ScrollView>
-              </View>
-            ) : null}
+          {showPrivacyPolicy ? (
+            <View style={styles.panel}>
+              {PRIVACY_POLICY_LINES.map((line, index) => (
+                <Text key={`${line}-${index}`} style={styles.panelText}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
-            <TouchableOpacity
-              style={styles.sectionButton}
-              onPress={() => {
-                playButtonSound();
-                setShowBuildSummary((prev) => !prev);
-              }}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.sectionButtonText}>
-                {showBuildSummary ? 'Hide Current Build Summary' : 'Current Build Summary'}
-              </Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sectionButton}
+            onPress={() => {
+              playButtonSound();
+              setShowBuildSummary((prev) => !prev);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.sectionButtonText}>
+              {showBuildSummary ? 'Hide Current Build Summary' : 'Current Build Summary'}
+            </Text>
+          </TouchableOpacity>
 
-            {showBuildSummary ? (
-              <View style={styles.panel}>
-                <ScrollView style={styles.summaryScroll} nestedScrollEnabled>
-                  {BUILD_SUMMARY_LINES.map((line) => (
-                    <Text key={line} style={styles.panelText}>
-                      {line}
-                    </Text>
-                  ))}
-                </ScrollView>
-              </View>
-            ) : null}
+          {showBuildSummary ? (
+            <View style={styles.panel}>
+              {BUILD_SUMMARY_LINES.map((line) => (
+                <Text key={line} style={styles.panelText}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
-            <Text style={styles.aboutText}>Made with love for Mason & Emma</Text>
-            <Text style={styles.versionText}>Little Worlds v1.0</Text>
+          <Text style={styles.aboutText}>Made with love for Mason & Emma</Text>
+          <Text style={styles.versionText}>Little Worlds v1.0</Text>
 
-            <TouchableOpacity style={styles.doneButton} onPress={handleClose} activeOpacity={0.85}>
-              <Text style={styles.doneButtonText}>Done</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+          <TouchableOpacity style={styles.doneButton} onPress={handleClose} activeOpacity={0.85}>
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   modalOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    elevation: 9999,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
   modalCard: {
     backgroundColor: '#fff',
     borderRadius: 24,
-    width: '82%',
+    width: '90%',
     maxWidth: 560,
-    maxHeight: '84%',
-    minWidth: 320,
+    maxHeight: '86%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
@@ -231,9 +233,6 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 18,
     marginBottom: 4,
-  },
-  summaryScroll: {
-    maxHeight: 150,
   },
   doneButton: {
     backgroundColor: '#95D5A0',

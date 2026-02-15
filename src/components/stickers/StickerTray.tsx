@@ -11,8 +11,6 @@ import {
 import StickerVisual from './StickerVisual';
 import { StickerDefinition, StickerTrayTheme } from './types';
 
-export const TRAY_ITEM_SIZE = 52;
-
 type StickerTrayProps = {
   stickers: StickerDefinition[];
   trayHeight: number;
@@ -32,6 +30,12 @@ type TrayItemProps = {
   onDragStart: (stickerId: string, x: number, y: number) => void;
   onDragMove: (stickerId: string, x: number, y: number) => void;
   onDragEnd: (stickerId: string, x: number, y: number) => void;
+  itemSize: number;
+  buttonWidth: number;
+  buttonMinHeight: number;
+  labelMinHeight: number;
+  labelFontSize: number;
+  labelLineHeight: number;
   labelColor: string;
   highlightDropZone: boolean;
   isActiveSticker: boolean;
@@ -103,6 +107,12 @@ function TrayItem({
   onDragStart,
   onDragMove,
   onDragEnd,
+  itemSize,
+  buttonWidth,
+  buttonMinHeight,
+  labelMinHeight,
+  labelFontSize,
+  labelLineHeight,
   labelColor,
   highlightDropZone: _highlightDropZone,
   isActiveSticker: _isActiveSticker,
@@ -138,10 +148,20 @@ function TrayItem({
   );
 
   return (
-    <View style={[styles.trayButton, isDragging && styles.trayButtonDragging]} {...panResponder.panHandlers}>
+    <View
+      style={[
+        styles.trayButton,
+        {
+          width: buttonWidth,
+          minHeight: buttonMinHeight,
+        },
+        isDragging && styles.trayButtonDragging,
+      ]}
+      {...panResponder.panHandlers}
+    >
       <View style={styles.stickerFrame}>
         <StickerVisual
-          size={TRAY_ITEM_SIZE}
+          size={itemSize}
           name={sticker.name}
           color={sticker.color}
           imageSource={sticker.imageSource}
@@ -149,12 +169,19 @@ function TrayItem({
           imageOffsetY={sticker.imageOffsetY}
         />
       </View>
-      <View style={styles.labelWrap}>
+      <View style={[styles.labelWrap, { minHeight: labelMinHeight }]}>
         <Text
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.8}
-          style={[styles.stickerLabel, { color: labelColor }]}
+          style={[
+            styles.stickerLabel,
+            {
+              color: labelColor,
+              fontSize: labelFontSize,
+              lineHeight: labelLineHeight,
+            },
+          ]}
         >
           {label}
         </Text>
@@ -177,6 +204,19 @@ export default function StickerTray({
   contentOffsetY = 0,
 }: StickerTrayProps) {
   const hasTrayAsset = Boolean(trayAssetSource);
+  const isCompactTray = trayHeight < 170;
+  const itemSize = Math.max(38, Math.min(56, Math.round(trayHeight * (isCompactTray ? 0.36 : 0.28))));
+  const buttonWidth = itemSize + (isCompactTray ? 22 : 30);
+  const buttonMinHeight = itemSize + (isCompactTray ? 36 : 54);
+  const labelMinHeight = isCompactTray ? 20 : 30;
+  const labelFontSize = isCompactTray ? 9 : 11;
+  const labelLineHeight = isCompactTray ? 11 : 13;
+  const dynamicAssetPaddingTop = isCompactTray ? 22 : 30;
+  const dynamicAssetPaddingBottom = isCompactTray ? 6 : 16;
+  const dynamicAssetScaleY = isCompactTray ? 1.4 : 1.9;
+  const dynamicAssetTranslateY = isCompactTray ? 10 : 18;
+  const dynamicTraySideInset = isCompactTray ? 18 : 36;
+  const dynamicTrayBottom = isCompactTray ? 4 : 14;
 
   const trayItems = (
     <View
@@ -189,6 +229,12 @@ export default function StickerTray({
         <TrayItem
           key={sticker.id}
           sticker={sticker}
+          itemSize={itemSize}
+          buttonWidth={buttonWidth}
+          buttonMinHeight={buttonMinHeight}
+          labelMinHeight={labelMinHeight}
+          labelFontSize={labelFontSize}
+          labelLineHeight={labelLineHeight}
           labelColor={theme.trayLabelText}
           onDragStart={onTrayDragStart}
           onDragMove={onTrayDragMove}
@@ -206,6 +252,9 @@ export default function StickerTray({
         styles.tray,
         {
           height: trayHeight,
+          left: dynamicTraySideInset,
+          right: dynamicTraySideInset,
+          bottom: dynamicTrayBottom,
           backgroundColor: hasTrayAsset ? 'transparent' : theme.trayBackground,
           borderColor: hasTrayAsset ? 'transparent' : theme.trayBorder,
         },
@@ -214,8 +263,19 @@ export default function StickerTray({
       {hasTrayAsset ? (
         <ImageBackground
           source={trayAssetSource!}
-          style={styles.assetBackground}
-          imageStyle={styles.assetBackgroundImage}
+          style={[
+            styles.assetBackground,
+            {
+              paddingTop: dynamicAssetPaddingTop,
+              paddingBottom: dynamicAssetPaddingBottom,
+            },
+          ]}
+          imageStyle={[
+            styles.assetBackgroundImage,
+            {
+              transform: [{ scaleY: dynamicAssetScaleY }, { translateY: dynamicAssetTranslateY }],
+            },
+          ]}
           resizeMode="stretch"
         >
           {trayItems}
@@ -256,7 +316,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     minWidth: '100%',
   },
   trayButton: {
@@ -274,7 +334,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   labelWrap: {
-    marginTop: 3,
+    marginTop: 0,
     minHeight: 30,
     width: '100%',
     alignItems: 'center',

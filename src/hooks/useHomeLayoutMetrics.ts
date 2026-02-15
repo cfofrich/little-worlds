@@ -20,15 +20,19 @@ export function useHomeLayoutMetrics(
 ): HomeLayoutMetrics {
   return useMemo(() => {
     const isTablet = screenWidth >= 1024;
-    const cardWidth = Math.round(screenWidth * (isTablet ? 0.54 : 0.58));
-    const cardHeight = Math.round(cardWidth * 0.625);
+    const cardWidth = Math.round(
+      isTablet
+        ? screenWidth * 0.54
+        : Math.min(screenWidth * 0.5, screenHeight * 1.02)
+    );
+    const cardHeight = Math.round(cardWidth * (isTablet ? 0.625 : 0.58));
     const snapInterval = cardWidth + SPACING;
     const paddingHorizontal = Math.max(0, (screenWidth - cardWidth) / 2);
 
-    const titleHeight = Math.round(screenHeight * (isTablet ? 0.19 : 0.21));
-    const titleWidth = Math.round(screenWidth * (isTablet ? 0.46 : 0.56));
+    const titleHeight = Math.round(screenHeight * (isTablet ? 0.19 : 0.15));
+    const titleWidth = Math.round(screenWidth * (isTablet ? 0.46 : 0.5));
 
-    const carouselTop = Math.round(screenHeight * (isTablet ? 0.2 : 0.24));
+    const carouselTop = Math.max(0, Math.round(screenHeight * (isTablet ? 0.2 : 0.18)) - (isTablet ? 0 : 10));
     const titleTop = Math.max(0, carouselTop - titleHeight - Math.round(screenHeight * 0.008));
 
     return {

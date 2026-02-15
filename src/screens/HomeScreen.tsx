@@ -56,6 +56,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const hasFocusedOnceRef = useRef(false);
 
   const scenes = useMemo(() => HOME_SCENES, []);
+  const isPhoneLandscape = screenWidth < 1024;
+  const homeGearSize = isPhoneLandscape ? 44 : 52;
 
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => {
@@ -268,8 +270,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           }}
           activeOpacity={0.8}
         >
-          <View style={styles.gearIcon}>
-            <Animated.Text style={styles.gearText}>⚙️</Animated.Text>
+          <View style={[styles.gearIcon, { width: homeGearSize, height: homeGearSize, borderRadius: homeGearSize / 2 }]}>
+            <Animated.Text style={[styles.gearText, { fontSize: isPhoneLandscape ? 26 : 32 }]}>⚙️</Animated.Text>
           </View>
         </TouchableOpacity>
 
