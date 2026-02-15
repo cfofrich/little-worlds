@@ -18,7 +18,7 @@ type SettingsModalProps = {
 
 const BUILD_SUMMARY_LINES = [
   'Little Worlds current build:',
-  '- 5 themed worlds wired (Playground, Beach, Construction, Farm, Space).',
+  '- 6 themed worlds wired (Playground, Beach, Construction, Farm, Space, Zoo).',
   '- Drag stickers from tray onto scene and drag back anytime to clean up.',
   '- Pinch placed stickers to resize (smaller or larger) while building a scene.',
   '- You can drag stickers back to the tray to remove them without using Clean Up.',

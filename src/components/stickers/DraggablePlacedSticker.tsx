@@ -87,6 +87,29 @@ export default function DraggablePlacedSticker({
   const pinchStartScaleRef = useRef(initialScale);
 
   const clampScale = (value: number) => clamp(value, 0.5, 2);
+  const TAP_MOVE_THRESHOLD = 8;
+
+  const runTapPulse = () => {
+    popScale.stopAnimation();
+    popScale.setValue(1);
+    Animated.sequence([
+      Animated.timing(popScale, {
+        toValue: 0.92,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(popScale, {
+        toValue: 1.1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(popScale, {
+        toValue: 1,
+        duration: 110,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const getDistanceBetweenTouches = (event: GestureResponderEvent) => {
     const touches = event.nativeEvent.touches;
@@ -231,9 +254,17 @@ export default function DraggablePlacedSticker({
 
           updateDragPosition(gestureState);
         },
-        onPanResponderRelease: () => {
+        onPanResponderRelease: (event, gestureState) => {
           const interaction = interactionModeRef.current;
           interactionModeRef.current = 'none';
+
+          const movedDistance = Math.hypot(gestureState.dx, gestureState.dy);
+          const isSingleTouch = (event.nativeEvent.touches?.length ?? 0) <= 1;
+          const isTap = interaction === 'drag' && isSingleTouch && movedDistance <= TAP_MOVE_THRESHOLD;
+
+          if (isTap) {
+            runTapPulse();
+          }
 
           if (interaction === 'drag') {
             pan.flattenOffset();
