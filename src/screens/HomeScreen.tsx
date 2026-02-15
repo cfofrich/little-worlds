@@ -27,6 +27,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
 
   const {
+    isTablet,
     cardWidth,
     cardHeight,
     snapInterval,
@@ -305,6 +306,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             spacing={SPACING}
             titleImageWidth={Math.round(cardWidth * 0.96)}
             titleImageHeight={Math.round(cardHeight * 0.48)}
+            titleOffsetY={isTablet ? 0 : -8}
           />
         </View>
 
@@ -356,14 +358,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   gearIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255, 255, 255, 0.58)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.72)',
   },
   gearText: {
     fontSize: 32,

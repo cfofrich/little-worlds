@@ -52,7 +52,7 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   const trayHeight = Math.round(
     Math.min(220, Math.max(isPhoneLandscape ? 118 : 180, screenHeight * 0.26))
   );
-  const trayContentOffsetY = isPhoneLandscape ? 12 : 20;
+  const trayContentOffsetY = isPhoneLandscape ? 10 : 20;
   const placedStickerSize = isPhoneLandscape ? 78 : 92;
 
   const topOffset = insets.top + (isPhoneLandscape ? 7 : 11);

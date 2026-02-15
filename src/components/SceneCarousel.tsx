@@ -33,6 +33,7 @@ type SceneCarouselProps = {
   spacing: number;
   titleImageWidth?: number;
   titleImageHeight?: number;
+  titleOffsetY?: number;
 };
 
 export default function SceneCarousel({
@@ -48,6 +49,7 @@ export default function SceneCarousel({
   spacing,
   titleImageWidth = 220,
   titleImageHeight = 66,
+  titleOffsetY = 0,
 }: SceneCarouselProps) {
   const flatListRef = useRef<Animated.FlatList<SceneItem> | null>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -204,7 +206,16 @@ export default function SceneCarousel({
               </View>
             )}
           </Animated.View>
-          <View style={[styles.cardTitleContainer, { width: titleImageWidth, height: titleImageHeight }]}>
+          <View
+            style={[
+              styles.cardTitleContainer,
+              {
+                width: titleImageWidth,
+                height: titleImageHeight,
+                transform: [{ translateY: titleOffsetY }],
+              },
+            ]}
+          >
             {item.titleImageSource ? (
               <Image source={item.titleImageSource} style={styles.cardTitleImage} resizeMode="contain" />
             ) : (

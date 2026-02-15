@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useState } from 'react';
@@ -54,8 +55,26 @@ export default function SettingsModal({
   onFeedbackPress,
   onButtonPress,
 }: SettingsModalProps) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [showBuildSummary, setShowBuildSummary] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const isPhoneLandscape = screenWidth < 1024;
+
+  const modalCardDynamicStyle = isPhoneLandscape
+    ? {
+        width: Math.min(screenWidth - 22, 460),
+        maxHeight: Math.round(screenHeight * 0.74),
+        borderRadius: 20,
+      }
+    : null;
+
+  const scrollContentDynamicStyle = isPhoneLandscape
+    ? {
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        paddingBottom: 12,
+      }
+    : null;
 
   const playButtonSound = () => {
     onButtonPress?.();
@@ -76,31 +95,37 @@ export default function SettingsModal({
   }
 
   return (
-    <View style={styles.modalOverlay}>
+    <View style={[styles.modalOverlay, isPhoneLandscape && styles.modalOverlayPhone]}>
       <Pressable style={styles.backdrop} onPress={handleClose} />
-      <View style={styles.modalCard}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.modalTitle}>Settings</Text>
+      <View style={[styles.modalCard, modalCardDynamicStyle]}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, scrollContentDynamicStyle]}>
+          <Text style={[styles.modalTitle, isPhoneLandscape && styles.modalTitlePhone]}>Settings</Text>
 
-          <TouchableOpacity style={styles.feedbackButton} onPress={handleFeedbackPress} activeOpacity={0.85}>
-            <Text style={styles.feedbackButtonText}>Send Feedback</Text>
+          <TouchableOpacity
+            style={[styles.feedbackButton, isPhoneLandscape && styles.feedbackButtonPhone]}
+            onPress={handleFeedbackPress}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.feedbackButtonText, isPhoneLandscape && styles.feedbackButtonTextPhone]}>Send Feedback</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.sectionButton}
+            style={[styles.sectionButton, isPhoneLandscape && styles.sectionButtonPhone]}
             onPress={() => {
               playButtonSound();
               setShowPrivacyPolicy((prev) => !prev);
             }}
             activeOpacity={0.85}
           >
-            <Text style={styles.sectionButtonText}>{showPrivacyPolicy ? 'Hide Privacy Policy' : 'Privacy Policy'}</Text>
+            <Text style={[styles.sectionButtonText, isPhoneLandscape && styles.sectionButtonTextPhone]}>
+              {showPrivacyPolicy ? 'Hide Privacy Policy' : 'Privacy Policy'}
+            </Text>
           </TouchableOpacity>
 
           {showPrivacyPolicy ? (
             <View style={styles.panel}>
               {PRIVACY_POLICY_LINES.map((line, index) => (
-                <Text key={`${line}-${index}`} style={styles.panelText}>
+                <Text key={`${line}-${index}`} style={[styles.panelText, isPhoneLandscape && styles.panelTextPhone]}>
                   {line}
                 </Text>
               ))}
@@ -108,14 +133,14 @@ export default function SettingsModal({
           ) : null}
 
           <TouchableOpacity
-            style={styles.sectionButton}
+            style={[styles.sectionButton, isPhoneLandscape && styles.sectionButtonPhone]}
             onPress={() => {
               playButtonSound();
               setShowBuildSummary((prev) => !prev);
             }}
             activeOpacity={0.85}
           >
-            <Text style={styles.sectionButtonText}>
+            <Text style={[styles.sectionButtonText, isPhoneLandscape && styles.sectionButtonTextPhone]}>
               {showBuildSummary ? 'Hide Current Build Summary' : 'Current Build Summary'}
             </Text>
           </TouchableOpacity>
@@ -123,18 +148,18 @@ export default function SettingsModal({
           {showBuildSummary ? (
             <View style={styles.panel}>
               {BUILD_SUMMARY_LINES.map((line) => (
-                <Text key={line} style={styles.panelText}>
+                <Text key={line} style={[styles.panelText, isPhoneLandscape && styles.panelTextPhone]}>
                   {line}
                 </Text>
               ))}
             </View>
           ) : null}
 
-          <Text style={styles.aboutText}>Made with love for Mason & Emma</Text>
-          <Text style={styles.versionText}>Little Worlds v1.0</Text>
+          <Text style={[styles.aboutText, isPhoneLandscape && styles.aboutTextPhone]}>Made with love for Mason & Emma</Text>
+          <Text style={[styles.versionText, isPhoneLandscape && styles.versionTextPhone]}>Little Worlds v1.0</Text>
 
-          <TouchableOpacity style={styles.doneButton} onPress={handleClose} activeOpacity={0.85}>
-            <Text style={styles.doneButtonText}>Done</Text>
+          <TouchableOpacity style={[styles.doneButton, isPhoneLandscape && styles.doneButtonPhone]} onPress={handleClose} activeOpacity={0.85}>
+            <Text style={[styles.doneButtonText, isPhoneLandscape && styles.doneButtonTextPhone]}>Done</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -151,6 +176,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+  },
+  modalOverlayPhone: {
+    paddingHorizontal: 10,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -183,6 +211,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
+  modalTitlePhone: {
+    fontSize: 20,
+    marginBottom: 12,
+  },
   feedbackButton: {
     borderRadius: 16,
     paddingVertical: 12,
@@ -193,10 +225,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#6BBFFF',
   },
+  feedbackButtonPhone: {
+    paddingVertical: 10,
+    marginTop: 4,
+  },
   feedbackButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#0284c7',
+  },
+  feedbackButtonTextPhone: {
+    fontSize: 14,
   },
   sectionButton: {
     borderRadius: 16,
@@ -209,10 +248,17 @@ const styles = StyleSheet.create({
     borderColor: '#94a3b8',
     backgroundColor: '#f8fafc',
   },
+  sectionButtonPhone: {
+    paddingVertical: 10,
+    marginTop: 8,
+  },
   sectionButtonText: {
     fontSize: 15,
     fontWeight: '700',
     color: '#334155',
+  },
+  sectionButtonTextPhone: {
+    fontSize: 13,
   },
   panel: {
     marginTop: 10,
@@ -234,6 +280,11 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 4,
   },
+  panelTextPhone: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 3,
+  },
   doneButton: {
     backgroundColor: '#95D5A0',
     borderRadius: 16,
@@ -243,10 +294,17 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
+  doneButtonPhone: {
+    marginTop: 12,
+    paddingVertical: 11,
+  },
   doneButtonText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
+  },
+  doneButtonTextPhone: {
+    fontSize: 16,
   },
   aboutText: {
     fontSize: 14,
@@ -254,10 +312,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   },
+  aboutTextPhone: {
+    marginTop: 12,
+    fontSize: 13,
+  },
   versionText: {
     fontSize: 12,
     color: '#94a3b8',
     marginTop: 4,
     textAlign: 'center',
+  },
+  versionTextPhone: {
+    fontSize: 11,
   },
 });

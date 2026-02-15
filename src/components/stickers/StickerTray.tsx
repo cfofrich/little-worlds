@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import StickerVisual from './StickerVisual';
 import { StickerDefinition, StickerTrayTheme } from './types';
@@ -36,6 +37,7 @@ type TrayItemProps = {
   labelMinHeight: number;
   labelFontSize: number;
   labelLineHeight: number;
+  showLabel: boolean;
   labelColor: string;
   highlightDropZone: boolean;
   isActiveSticker: boolean;
@@ -113,6 +115,7 @@ function TrayItem({
   labelMinHeight,
   labelFontSize,
   labelLineHeight,
+  showLabel,
   labelColor,
   highlightDropZone: _highlightDropZone,
   isActiveSticker: _isActiveSticker,
@@ -153,7 +156,8 @@ function TrayItem({
         styles.trayButton,
         {
           width: buttonWidth,
-          minHeight: buttonMinHeight,
+          minHeight: showLabel ? buttonMinHeight : itemSize + 14,
+          justifyContent: showLabel ? 'flex-start' : 'center',
         },
         isDragging && styles.trayButtonDragging,
       ]}
@@ -169,23 +173,25 @@ function TrayItem({
           imageOffsetY={sticker.imageOffsetY}
         />
       </View>
-      <View style={[styles.labelWrap, { minHeight: labelMinHeight }]}>
-        <Text
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.8}
-          style={[
-            styles.stickerLabel,
-            {
-              color: labelColor,
-              fontSize: labelFontSize,
-              lineHeight: labelLineHeight,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-      </View>
+      {showLabel ? (
+        <View style={[styles.labelWrap, { minHeight: labelMinHeight }]}>
+          <Text
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            style={[
+              styles.stickerLabel,
+              {
+                color: labelColor,
+                fontSize: labelFontSize,
+                lineHeight: labelLineHeight,
+              },
+            ]}
+          >
+            {label}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -203,16 +209,19 @@ export default function StickerTray({
   trayAssetSource,
   contentOffsetY = 0,
 }: StickerTrayProps) {
+  const { width: screenWidth } = useWindowDimensions();
+  const isPhoneLandscape = screenWidth < 1024;
   const hasTrayAsset = Boolean(trayAssetSource);
   const isCompactTray = trayHeight < 170;
-  const itemSize = Math.max(38, Math.min(56, Math.round(trayHeight * (isCompactTray ? 0.36 : 0.28))));
+  const showLabels = !isPhoneLandscape;
+  const itemSize = Math.max(36, Math.min(56, Math.round(trayHeight * (isCompactTray ? 0.34 : 0.28))));
   const buttonWidth = itemSize + (isCompactTray ? 22 : 30);
-  const buttonMinHeight = itemSize + (isCompactTray ? 36 : 54);
+  const buttonMinHeight = itemSize + (isCompactTray ? 34 : 54);
   const labelMinHeight = isCompactTray ? 20 : 30;
   const labelFontSize = isCompactTray ? 9 : 11;
   const labelLineHeight = isCompactTray ? 11 : 13;
-  const dynamicAssetPaddingTop = isCompactTray ? 22 : 30;
-  const dynamicAssetPaddingBottom = isCompactTray ? 6 : 16;
+  const dynamicAssetPaddingTop = isCompactTray ? 10 : 30;
+  const dynamicAssetPaddingBottom = isCompactTray ? 18 : 16;
   const dynamicAssetScaleY = isCompactTray ? 1.4 : 1.9;
   const dynamicAssetTranslateY = isCompactTray ? 10 : 18;
   const dynamicTraySideInset = isCompactTray ? 18 : 36;
@@ -235,6 +244,7 @@ export default function StickerTray({
           labelMinHeight={labelMinHeight}
           labelFontSize={labelFontSize}
           labelLineHeight={labelLineHeight}
+          showLabel={showLabels}
           labelColor={theme.trayLabelText}
           onDragStart={onTrayDragStart}
           onDragMove={onTrayDragMove}

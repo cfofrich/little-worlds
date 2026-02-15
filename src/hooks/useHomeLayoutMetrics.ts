@@ -33,7 +33,10 @@ export function useHomeLayoutMetrics(
     const titleWidth = Math.round(screenWidth * (isTablet ? 0.46 : 0.5));
 
     const carouselTop = Math.max(0, Math.round(screenHeight * (isTablet ? 0.2 : 0.18)) - (isTablet ? 0 : 10));
-    const titleTop = Math.max(0, carouselTop - titleHeight - Math.round(screenHeight * 0.008));
+    const titleTop = Math.max(
+      0,
+      carouselTop - titleHeight - Math.round(screenHeight * 0.008) - (isTablet ? 0 : 5)
+    );
 
     return {
       isTablet,
