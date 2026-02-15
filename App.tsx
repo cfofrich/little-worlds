@@ -6,6 +6,7 @@ import BeachScene from './src/screens/BeachScene';
 import ConstructionScene from './src/screens/ConstructionScene';
 import FarmScene from './src/screens/FarmScene';
 import SpaceScene from './src/screens/SpaceScene';
+import ZooScene from './src/screens/ZooScene';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   Construction: undefined;
   Farm: undefined;
   Space: undefined;
+  Zoo: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,6 +35,7 @@ export default function App() {
         <Stack.Screen name="Construction" component={ConstructionScene} options={{ gestureEnabled: false }} />
         <Stack.Screen name="Farm" component={FarmScene} options={{ gestureEnabled: false }} />
         <Stack.Screen name="Space" component={SpaceScene} options={{ gestureEnabled: false }} />
+        <Stack.Screen name="Zoo" component={ZooScene} options={{ gestureEnabled: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

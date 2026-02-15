@@ -2,7 +2,7 @@ import { ImageSourcePropType } from 'react-native';
 import type { RootStackParamList } from '../../App';
 import { StickerDefinition } from '../components/stickers/types';
 
-export type WorldId = 'playground' | 'beach' | 'construction' | 'farm' | 'space';
+export type WorldId = 'playground' | 'beach' | 'construction' | 'farm' | 'space' | 'zoo';
 export type WorldRouteName = Exclude<keyof RootStackParamList, 'Home'>;
 
 export type WorldConfig = {
@@ -99,6 +99,17 @@ const SPACE_STICKERS: StickerDefinition[] = [
   sticker('space-ufo', 'UFO', '#06b6d4', require('../../assets/stickers/space/UFO.png')),
 ];
 
+const ZOO_STICKERS: StickerDefinition[] = [
+  sticker('zoo-elephant', 'Elephant', '#94a3b8', require('../../assets/stickers/zoo/Elephant.png')),
+  sticker('zoo-giraffe', 'Giraffe', '#f59e0b', require('../../assets/stickers/zoo/Giraffe.png')),
+  sticker('zoo-hippo', 'Hippo', '#64748b', require('../../assets/stickers/zoo/Hippo.png')),
+  sticker('zoo-lion', 'Lion', '#f97316', require('../../assets/stickers/zoo/Lion.png')),
+  sticker('zoo-monkey', 'Monkey', '#a16207', require('../../assets/stickers/zoo/Monkey.png')),
+  sticker('zoo-penguin', 'Penguin', '#06b6d4', require('../../assets/stickers/zoo/Penguin.png')),
+  sticker('zoo-zebra', 'Zebra', '#334155', require('../../assets/stickers/zoo/Zebra.png')),
+  sticker('zoo-zookeeper', 'Zoo Keeper', '#22c55e', require('../../assets/stickers/zoo/Zoo Kepper.png')),
+];
+
 const WORLD_CONFIGS: Record<WorldId, WorldConfig> = {
   playground: {
     id: 'playground',
@@ -155,9 +166,20 @@ const WORLD_CONFIGS: Record<WorldId, WorldConfig> = {
     titleImageSource: require('../../assets/worldtitles/space.png'),
     stickers: SPACE_STICKERS,
   },
+  zoo: {
+    id: 'zoo',
+    routeName: 'Zoo',
+    name: 'Zoo',
+    worldLabel: 'Zoo Stickers',
+    cardColor: '#77C06C',
+    worldBackgroundSource: require('../../assets/backgrounds/worlds/zoo.png'),
+    homeBackgroundSource: require('../../assets/backgrounds/backgrounds_homescreen/zoo.png'),
+    titleImageSource: require('../../assets/worldtitles/zoo.png'),
+    stickers: ZOO_STICKERS,
+  },
 };
 
-export const WORLD_ORDER: WorldId[] = ['playground', 'beach', 'construction', 'farm', 'space'];
+export const WORLD_ORDER: WorldId[] = ['playground', 'beach', 'construction', 'farm', 'space', 'zoo'];
 
 export function getWorldConfig(worldId: WorldId): WorldConfig {
   return WORLD_CONFIGS[worldId];

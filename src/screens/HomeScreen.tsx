@@ -306,7 +306,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             spacing={SPACING}
             titleImageWidth={Math.round(cardWidth * 0.96)}
             titleImageHeight={Math.round(cardHeight * 0.48)}
-            titleOffsetY={isTablet ? 0 : -8}
+            titleOffsetY={isTablet ? 0 : -13}
           />
         </View>
 
