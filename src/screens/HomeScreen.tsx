@@ -3,6 +3,7 @@ import {
   Animated,
   Easing,
   Image,
+  Linking,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -149,17 +150,30 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   }, []);
 
   const handleFeedback = async () => {
-    const isAvailable = await MailComposer.isAvailableAsync();
+    const email = 'littleworldsapp@proton.me';
+    const subject = 'Little World: Stickers Feedback';
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
 
-    if (!isAvailable) {
-      Alert.alert('Mail Unavailable', 'Mail is not configured on this device yet.');
+    try {
+      const isAvailable = await MailComposer.isAvailableAsync();
+      if (isAvailable) {
+        await MailComposer.composeAsync({
+          recipients: [email],
+          subject,
+        });
+        return;
+      }
+    } catch {
+      // Fall through to mailto fallback.
+    }
+
+    const canOpen = await Linking.canOpenURL(mailtoUrl);
+    if (canOpen) {
+      await Linking.openURL(mailtoUrl);
       return;
     }
 
-    await MailComposer.composeAsync({
-      recipients: ['littleworldsapp@proton.me'],
-      subject: 'Little Worlds Feedback',
-    });
+    Alert.alert('Mail Unavailable', 'No mail app is configured on this device yet.');
   };
 
   const handleCardPress = async (_index: number, routeName: keyof RootStackParamList) => {
@@ -279,7 +293,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         <TouchableOpacity style={{ position: 'absolute', top: titleTop, alignSelf: 'center' }} onPress={handleLogoPress} activeOpacity={0.9}>
           <Animated.View style={{ transform: [{ scale: logoPulse }] }}>
             <Image
-              source={require('../../assets/backgrounds/littleworldstitle.png')}
+              source={require('../../assets/backgrounds/littleworldsstickers.png')}
               style={{ width: Math.round(titleWidth * 1.18), height: Math.round(titleHeight * 1.18) }}
               resizeMode="contain"
             />

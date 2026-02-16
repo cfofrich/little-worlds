@@ -92,12 +92,12 @@ export default function App() {
             <View style={styles.bootContent}>
               <Image source={require('./assets/logo.png')} style={styles.bootLogo} resizeMode="contain" />
               <Image
-                source={require('./assets/backgrounds/littleworldstitle.png')}
+                source={require('./assets/backgrounds/littleworldsstickers.png')}
                 style={styles.bootWordmark}
                 resizeMode="contain"
               />
               <ActivityIndicator size="large" color="#FFFFFF" />
-              <Text style={styles.bootStatus}>Loading Little Worlds...</Text>
+              <Text style={styles.bootStatus}>Loading Little World: Stickers...</Text>
             </View>
           </ImageBackground>
         </View>

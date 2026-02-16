@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
@@ -80,17 +81,30 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
   }, [navigation, transitionWashOpacity]);
 
   const handleFeedback = async () => {
-    const isAvailable = await MailComposer.isAvailableAsync();
+    const email = 'littleworldsapp@proton.me';
+    const subject = 'Little World: Stickers Feedback';
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
 
-    if (!isAvailable) {
-      Alert.alert('Mail Unavailable', 'Mail is not configured on this device yet.');
+    try {
+      const isAvailable = await MailComposer.isAvailableAsync();
+      if (isAvailable) {
+        await MailComposer.composeAsync({
+          recipients: [email],
+          subject,
+        });
+        return;
+      }
+    } catch {
+      // Fall through to mailto fallback.
+    }
+
+    const canOpen = await Linking.canOpenURL(mailtoUrl);
+    if (canOpen) {
+      await Linking.openURL(mailtoUrl);
       return;
     }
 
-    await MailComposer.composeAsync({
-      recipients: ['littleworldsapp@proton.me'],
-      subject: 'Little Worlds Feedback',
-    });
+    Alert.alert('Mail Unavailable', 'No mail app is configured on this device yet.');
   };
 
   const playButtonPulse = useCallback((scale: Animated.Value) => {

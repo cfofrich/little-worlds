@@ -17,7 +17,7 @@ type SettingsModalProps = {
 };
 
 const BUILD_SUMMARY_LINES = [
-  'Little Worlds current build:',
+  'Little World: Stickers current build:',
   '- 6 themed worlds wired (Playground, Beach, Construction, Farm, Space, Zoo).',
   '- Drag stickers from tray onto scene and drag back anytime to clean up.',
   '- Pinch placed stickers to resize (smaller or larger) while building a scene.',
@@ -29,7 +29,7 @@ const BUILD_SUMMARY_LINES = [
 const PRIVACY_POLICY_LINES = [
   'Effective date: February 14, 2026',
   '',
-  'Little Worlds is designed for local, private play.',
+  'Little World: Stickers is designed for local, private play.',
   '',
   'What we collect right now:',
   '- No account or sign in.',
@@ -156,7 +156,7 @@ export default function SettingsModal({
           ) : null}
 
           <Text style={[styles.aboutText, isPhoneLandscape && styles.aboutTextPhone]}>Made with love for Mason & Emma</Text>
-          <Text style={[styles.versionText, isPhoneLandscape && styles.versionTextPhone]}>Little Worlds v1.0</Text>
+          <Text style={[styles.versionText, isPhoneLandscape && styles.versionTextPhone]}>Little World: Stickers v1.0</Text>
 
           <TouchableOpacity style={[styles.doneButton, isPhoneLandscape && styles.doneButtonPhone]} onPress={handleClose} activeOpacity={0.85}>
             <Text style={[styles.doneButtonText, isPhoneLandscape && styles.doneButtonTextPhone]}>Done</Text>
