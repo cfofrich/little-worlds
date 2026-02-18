@@ -12,7 +12,6 @@ import { useState } from 'react';
 type SettingsModalProps = {
   visible: boolean;
   onClose: () => void;
-  onFeedbackPress: () => void;
   onButtonPress?: () => void;
 };
 
@@ -39,20 +38,16 @@ const PRIVACY_POLICY_LINES = [
   '',
   'How the app works:',
   '- Stickers, settings, and play interactions run on-device.',
-  '- Send Feedback opens your own mail app. If you email us, we only receive what you choose to send.',
+  '- No outbound links or contact actions are shown in the child-facing settings menu.',
   '',
   'Future updates:',
   '- If diagnostics, analytics, or other logging are added in the future, this policy will be updated before release.',
   '- Where required, new data collection features will be clearly disclosed and consented.',
-  '',
-  'Contact:',
-  '- littleworldsapp@proton.me',
 ];
 
 export default function SettingsModal({
   visible,
   onClose,
-  onFeedbackPress,
   onButtonPress,
 }: SettingsModalProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -85,11 +80,6 @@ export default function SettingsModal({
     onClose();
   };
 
-  const handleFeedbackPress = () => {
-    playButtonSound();
-    onFeedbackPress();
-  };
-
   if (!visible) {
     return null;
   }
@@ -102,15 +92,12 @@ export default function SettingsModal({
           <Text style={[styles.modalTitle, isPhoneLandscape && styles.modalTitlePhone]}>Settings</Text>
 
           <TouchableOpacity
-            style={[styles.feedbackButton, isPhoneLandscape && styles.feedbackButtonPhone]}
-            onPress={handleFeedbackPress}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.feedbackButtonText, isPhoneLandscape && styles.feedbackButtonTextPhone]}>Send Feedback</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.sectionButton, isPhoneLandscape && styles.sectionButtonPhone]}
+            style={[
+              styles.sectionButton,
+              styles.firstSectionButton,
+              isPhoneLandscape && styles.sectionButtonPhone,
+              isPhoneLandscape && styles.firstSectionButtonPhone,
+            ]}
             onPress={() => {
               playButtonSound();
               setShowPrivacyPolicy((prev) => !prev);
@@ -215,28 +202,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     marginBottom: 12,
   },
-  feedbackButton: {
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginTop: 6,
-    width: '100%',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#6BBFFF',
-  },
-  feedbackButtonPhone: {
-    paddingVertical: 10,
-    marginTop: 4,
-  },
-  feedbackButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0284c7',
-  },
-  feedbackButtonTextPhone: {
-    fontSize: 14,
-  },
   sectionButton: {
     borderRadius: 16,
     paddingVertical: 12,
@@ -248,9 +213,15 @@ const styles = StyleSheet.create({
     borderColor: '#94a3b8',
     backgroundColor: '#f8fafc',
   },
+  firstSectionButton: {
+    marginTop: 4,
+  },
   sectionButtonPhone: {
     paddingVertical: 10,
     marginTop: 8,
+  },
+  firstSectionButtonPhone: {
+    marginTop: 2,
   },
   sectionButtonText: {
     fontSize: 15,

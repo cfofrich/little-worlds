@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
 import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Linking } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
-import * as MailComposer from 'expo-mail-composer';
 import { RootStackParamList } from '../../../App';
 import WorldStickerBoard, { WorldStickerBoardHandle } from '../stickers/WorldStickerBoard';
 import { StickerTrayTheme } from '../stickers/types';
@@ -79,33 +76,6 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
 
     return unsubscribeFocus;
   }, [navigation, transitionWashOpacity]);
-
-  const handleFeedback = async () => {
-    const email = 'littleworldsapp@proton.me';
-    const subject = 'Little World: Stickers Feedback';
-    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
-
-    try {
-      const isAvailable = await MailComposer.isAvailableAsync();
-      if (isAvailable) {
-        await MailComposer.composeAsync({
-          recipients: [email],
-          subject,
-        });
-        return;
-      }
-    } catch {
-      // Fall through to mailto fallback.
-    }
-
-    const canOpen = await Linking.canOpenURL(mailtoUrl);
-    if (canOpen) {
-      await Linking.openURL(mailtoUrl);
-      return;
-    }
-
-    Alert.alert('Mail Unavailable', 'No mail app is configured on this device yet.');
-  };
 
   const playButtonPulse = useCallback((scale: Animated.Value) => {
     scale.stopAnimation();
@@ -255,7 +225,6 @@ export default function WorldSceneShell({ navigation, world }: WorldSceneShellPr
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
-        onFeedbackPress={handleFeedback}
       />
       <Animated.View
         pointerEvents={isTransitionVisible ? 'auto' : 'none'}

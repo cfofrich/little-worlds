@@ -1,9 +1,7 @@
 import {
-  Alert,
   Animated,
   Easing,
   Image,
-  Linking,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -11,7 +9,6 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as MailComposer from 'expo-mail-composer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import SceneCarousel from '../components/SceneCarousel';
@@ -148,33 +145,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const handlePreviewIndexChange = useCallback((nextIndex: number) => {
     setFocusedIndex(nextIndex);
   }, []);
-
-  const handleFeedback = async () => {
-    const email = 'littleworldsapp@proton.me';
-    const subject = 'Little World: Stickers Feedback';
-    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
-
-    try {
-      const isAvailable = await MailComposer.isAvailableAsync();
-      if (isAvailable) {
-        await MailComposer.composeAsync({
-          recipients: [email],
-          subject,
-        });
-        return;
-      }
-    } catch {
-      // Fall through to mailto fallback.
-    }
-
-    const canOpen = await Linking.canOpenURL(mailtoUrl);
-    if (canOpen) {
-      await Linking.openURL(mailtoUrl);
-      return;
-    }
-
-    Alert.alert('Mail Unavailable', 'No mail app is configured on this device yet.');
-  };
 
   const handleCardPress = async (_index: number, routeName: keyof RootStackParamList) => {
     if (routeName === 'Home') {
@@ -327,7 +297,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         <SettingsModal
           visible={settingsVisible}
           onClose={() => setSettingsVisible(false)}
-          onFeedbackPress={handleFeedback}
         />
       </View>
     </View>
