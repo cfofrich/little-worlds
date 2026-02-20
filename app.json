@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Little World: Stickers",
+    "name": "Stickers",
     "slug": "little-worlds",
     "version": "1.0.0",
     "orientation": "landscape",
@@ -13,6 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/darkmodeicon-trimmed.png"
+      },
       "supportsTablet": true,
       "bundleIdentifier": "com.littleworldsapp.little-worlds",
       "requireFullScreen": true,
